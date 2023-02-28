@@ -24,7 +24,7 @@ model User {
   email           String   @unique
   fullName        String
   createdAt       DateTime @default(now())
-  two_factor_auth Boolean
+  two_factor_auth Boolean  @default(false)
   played          Int      @default(0)
   won             Int      @default(0)
   lost            Int      @default(0)
@@ -34,3 +34,18 @@ model User {
 
   @@map("users")
 }
+
+//                try {
+//                 const user = await this.prisma.user.create({
+//                   data: {
+//                     username: (await info).username,
+//                     pass: (await info).password,
+//                     email: (await info).email,
+//                     fullName: (await info).fullName,
+//                     two_factor_auth: false,
+//                     coalition: (await info).coalition,
+//                   }
+//                 });
+//               } catch (error) {
+//                 console.log(error);
+//               } 
