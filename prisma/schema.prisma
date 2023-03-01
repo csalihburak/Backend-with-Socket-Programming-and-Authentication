@@ -23,6 +23,7 @@ model User {
   pass            String
   email           String   @unique
   fullName        String
+  pictureUrl      String
   createdAt       DateTime @default(now())
   two_factor_auth Boolean  @default(false)
   played          Int      @default(0)
@@ -35,17 +36,12 @@ model User {
   @@map("users")
 }
 
-//                try {
-//                 const user = await this.prisma.user.create({
-//                   data: {
-//                     username: (await info).username,
-//                     pass: (await info).password,
-//                     email: (await info).email,
-//                     fullName: (await info).fullName,
-//                     two_factor_auth: false,
-//                     coalition: (await info).coalition,
-//                   }
-//                 });
-//               } catch (error) {
-//                 console.log(error);
-//               } 
+model SessionToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  loginIp   String
+  token     String
+  loginTime DateTime @default(now())
+
+  @@map("sessionTokens")
+}

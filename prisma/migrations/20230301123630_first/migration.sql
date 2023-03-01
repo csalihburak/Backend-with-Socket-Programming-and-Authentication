@@ -8,7 +8,7 @@ CREATE TABLE "users" (
     "pass" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "fullName" TEXT NOT NULL,
-    "phoneNumber" TEXT NOT NULL,
+    "pictureUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "two_factor_auth" BOOLEAN NOT NULL DEFAULT false,
     "played" INTEGER NOT NULL DEFAULT 0,
@@ -19,6 +19,16 @@ CREATE TABLE "users" (
     "coalition" TEXT NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sessionTokens" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "loginIp" TEXT NOT NULL,
+    "loginTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "sessionTokens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
