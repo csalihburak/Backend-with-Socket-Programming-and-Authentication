@@ -2,7 +2,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { validate } from 'class-validator';
-import { AuthDto, signIndto, UserInputDto } from '../dto';
+import { UserInputDto, AuthDto, signIndto } from './auth.dto';
 import * as crypto from 'crypto';
 import { Request } from 'express';
 

@@ -1,9 +1,8 @@
-import { getUserData, parseData, startTransaction, check, validateUser, userCheck } from './utils/auth.utlis'
+import { getUserData, parseData, startTransaction, validateUser, check, userCheck, } from './dto/auth.utlis';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Request } from 'express';
 import { validate } from 'class-validator';
-
 
 @Injectable()
 export class AuthService {
@@ -16,17 +15,17 @@ export class AuthService {
 			const res = await startTransaction(this.prisma, info, req);
 			throw res;
 		} catch (error) {
- 			if (error.code == 'ERR_BAD_REQUEST')
+			if (error.code == 'ERR_BAD_REQUEST')
 				return JSON.stringify({ status: 401, error: 'invalid_grant', message: process.env.ERROR_401 });
 			return error;
 		}
 	}
 
-	async singup(body : any, file: Express.Multer.File) {
+	async singup(body: any, file: Express.Multer.File) {
 		try {
 			const info = await check(body);
 			await validateUser(body, file, this.prisma);
-		} catch(error) {
+		} catch (error) {
 			return error;
 		}
 	}
