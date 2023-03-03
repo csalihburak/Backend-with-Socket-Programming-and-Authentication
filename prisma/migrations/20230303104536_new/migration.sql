@@ -26,9 +26,21 @@ CREATE TABLE "sessionTokens" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
     "loginIp" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
     "loginTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "sessionTokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "validations" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "validcode" INTEGER NOT NULL,
+    "email" TEXT NOT NULL,
+    "expired_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "validations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

@@ -5,7 +5,6 @@ import {
 	IsPhoneNumber,
 	IsString,
 	Matches,
-	MinLength,
 } from 'class-validator';
 
 export class AuthDto {
@@ -43,6 +42,9 @@ export class UserInputDto {
 
 	@IsBoolean()
 	twoFacAuth: string;
+
+	@IsNotEmpty({message: 'Username can not be empty.'})
+    username: string
 }
 
 export class signIndto {

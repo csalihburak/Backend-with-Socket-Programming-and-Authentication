@@ -45,3 +45,14 @@ model SessionToken {
 
   @@map("sessionTokens")
 }
+
+model Validate {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  validcode    Int
+  email        String
+  expired_date DateTime @default(now())
+
+
+  @@map("validations")
+}

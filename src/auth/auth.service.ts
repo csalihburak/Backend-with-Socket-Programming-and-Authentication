@@ -1,12 +1,12 @@
-import { getUserData, parseData, startTransaction, validateUser, check, userCheck, } from './dto/auth.utlis';
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
+import { MailerService } from '@nestjs-modules/mailer';
+import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { validate } from 'class-validator';
 
 @Injectable()
 export class AuthService {
-	constructor(public prisma: PrismaService) {}
+	constructor(public prisma: PrismaService, private readonly mailerService: MailerService) {}
 
 	async intraGet(code: string, req: Request) {
 		try {
@@ -24,17 +24,44 @@ export class AuthService {
 	async singup(body: any, file: Express.Multer.File) {
 		try {
 			const info = await check(body);
-			await validateUser(body, file, this.prisma);
+			const user = await validateUser(body, file, this.prisma);
+			throw user[1];
+				
 		} catch (error) {
 			return error;
 		}
 	}
 
-	async singIn(req: Request) {
+	async signIn(req: Request) {
 		try {
 			return userCheck(req, this.prisma);
 		} catch (error) {
 			return error;
 		}
+	}
+
+	async sendValidationCode(req) {
+		try {
+			const user = await getSession(req, this.prisma);
+			if (user.two_factor_auth == true) {
+				let validCode = Math.floor((Math.random() * 9999) + 1000);
+				await sendCode({
+					user: user,
+					loginIp: req.ip.split(':')[3],
+					url: req,
+					browser: req.useragent.browser,
+
+				}, validCode, this.mailerService, this.prisma);
+			} else {
+				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."})
+			}
+		} catch (error) {
+			console.log(error);
+			return error;
+		}
+	}
+
+	async validateCode() {
+		
 	}
 }

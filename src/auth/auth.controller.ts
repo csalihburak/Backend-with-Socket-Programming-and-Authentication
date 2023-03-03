@@ -13,14 +13,11 @@ export class AuthController {
 	@Get('intra42')
 	async firstInsert(@Query() query, @Req() req: Request) {
 		if (!query.code)
-			return JSON.stringify({
-				status: 404,
-				message: 'Auth token is not given',
-			});
+			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
 		return await this.authService.intraGet(query.code, req);
 	}
 
-	@Post('singup')
+	@Post('signup')
 	@UseInterceptors(
 		FileInterceptor('avatar', {
 			storage: diskStorage({
@@ -44,6 +41,16 @@ export class AuthController {
 
 	@Post('signin')
 	async signin(@Req() req: Request) {
-		return this.authService.singIn(req);
+		return this.authService.signIn(req);
+	}
+
+	@Post('sendValidationCode')
+	async sendValidCode (@Req() req) {
+		return this.authService.sendValidationCode(req);
+	}
+
+	@Post('loginValidate')
+	async validate(@Req() req) {
+		
 	}
 }
