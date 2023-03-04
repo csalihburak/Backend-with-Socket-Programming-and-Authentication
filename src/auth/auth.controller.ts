@@ -17,11 +17,32 @@ export class AuthController {
 		const response = await this.authService.intraGet(query.code, req);
 		const parse = JSON.parse(response);
 
-			res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
-			res.redirect(`http://142.93.104.99:3000/SetProfile?sessionToken=${parse.token}`);
-			res.end();
+			//res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
+			res.setHeader('Set-Cookie', [`sessionToken=${parse.token}; Path=/; HttpOnly`]);
+			res.redirect(`http://142.93.164.123:3000/auth/login-page`);
 	}
 
+ 	@Get('login-page')
+	async getLoginPage(@Res() res: Response, @Req() req: Request) {
+		console.log(req.headers);
+	  const html = `
+		<html>
+		  <head>
+			<title>Login Page</title>
+		  </head>
+		  <body>
+			<form method="post" action="/auth/login">
+			  <label for="username">Username:</label>
+			  <input type="text" id="username" name="username"><br><br>
+			  <label for="password">Password:</label>
+			  <input type="password" id="password" name="password"><br><br>
+			  <input type="submit" value="Submit">
+			</form>
+		  </body>
+		</html>
+	  `;
+	  res.send(html);
+	} 
 	@Post('signup')
 	async signup(@Body() body: any) {
 		console.log("test:");

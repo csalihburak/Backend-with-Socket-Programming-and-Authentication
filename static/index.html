@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Chat App</title>
+  </head>
+  <body>
+    <div id="messages"></div>
+    <form id="form">
+      <select id="recipient">
+        <option value="">Select a recipient</option>
+        <option value="Alice">Alice</option>
+        <option value="Bob">Bob</option>
+        <option value="Charlie">Charlie</option>
+      </select>
+      <input type="text" id="input" autocomplete="off" placeholder="Type your message...">
+      <button>Send</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      const form = document.getElementById('form');
+      const input = document.getElementById('input');
+      const recipient = document.getElementById('recipient');
+      const messages = document.getElementById('messages');
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (recipient.value && input.value) {
+          socket.emit('message', { recipient: recipient.value, text: input.value });
+          input.value = '';
+        }
+      });
+
+      socket.on('message', (message) => {
+        const li = document.createElement('li');
+        li.innerText = `${message.sender}: ${message.text}`;
+        messages.appendChild(li);
+      });
+    </script>
+  </body>
+</html>
+
+</html>
