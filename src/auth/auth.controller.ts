@@ -11,31 +11,21 @@ export class AuthController {
 	constructor(private authService: AuthService) {}
 
 	@Get('intra42')
-	async firstInsert(@Query() query, @Req() req: Request) {
+	async firstInsert(@Query() query, @Req() req: Request, @Res() res: Response) {
 		if (!query.code)
 			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
-		return await this.authService.intraGet(query.code, req);
+		const response = await this.authService.intraGet(query.code, req);
+		const parse = JSON.parse(response);
+
+			res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
+			res.redirect(`http://142.93.104.99:3000/SetProfile?sessionToken=${parse.token}`);
+			res.end();
 	}
 
 	@Post('signup')
-	@UseInterceptors(
-		FileInterceptor('avatar', {
-			storage: diskStorage({
-				destination: './avatars/',
-				filename: (req, file, callback) => {
-					const uniqsuffix = Date.now() + '-' + Math.round(Math.random() + 1e9);
-					const ext = extname(file.originalname);
-					const filename = `${file.originalname}-${uniqsuffix}${ext}`;
-					callback(null, filename);
-				},
-			}),
-		}),
-	)
-	async signup(@UploadedFile() file: Express.Multer.File, @Body() body: any) {
-		if (file && (file.mimetype !== 'image/png' && file.mimetype !== 'image/jpeg')) {
-			await fs.promises.unlink(file.path);
-			throw new BadRequestException('Only PNG and JPEG files are allowed');
-		  }
+	async signup(@Body() body: any) {
+		console.log("test:");
+		var file: Express.Multer.File;
 		return this.authService.singup(body, file);
 	}
 
@@ -51,6 +41,6 @@ export class AuthController {
 
 	@Post('loginValidate')
 	async validate(@Req() req) {
-		
+		return this.authService.validateCode(req);
 	}
 }

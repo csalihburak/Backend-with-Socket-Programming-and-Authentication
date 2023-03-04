@@ -1,4 +1,4 @@
-import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData } from './utils/index'
+import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
@@ -13,7 +13,7 @@ export class AuthService {
 			const [data, callback] = await getUserData(code);
 			const info = await parseData(data.data, callback as string);
 			const res = await startTransaction(this.prisma, info, req);
-			throw res;
+			return res;
 		} catch (error) {
 			if (error.code == 'ERR_BAD_REQUEST')
 				return JSON.stringify({ status: 401, error: 'invalid_grant', message: process.env.ERROR_401 });
@@ -52,16 +52,27 @@ export class AuthService {
 					browser: req.useragent.browser,
 
 				}, validCode, this.mailerService, this.prisma);
+				return JSON.stringify({status: 403, message: "Email sent succesfully."});
 			} else {
-				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."})
+				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."});
 			}
 		} catch (error) {
-			console.log(error);
 			return error;
 		}
 	}
 
-	async validateCode() {
-		
+	async validateCode(req) {
+		try {
+			if (!req.body.email) {
+				return JSON.stringify({status: 403, message: "Mail adresini kontrol ediniz."})
+			} else if (!req.body.code
+				) {
+				return JSON.stringify({status: 403, message: "Doğrulama kodunu kontrol ediniz."})
+			} else {
+				return codeValidation(req.body.email, parseInt(req.body.code), this.prisma);
+			}
+		} catch (error) {
+			return error;
+		}
 	}
 }

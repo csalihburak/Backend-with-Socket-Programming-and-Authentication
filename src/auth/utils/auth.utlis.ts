@@ -47,3 +47,24 @@ export async function sendCode(data: any, validCode: number, mailerService: Mail
 		throw error;
 	});
 }
+
+export async function codeValidation(email: string, validationCode: number, prisma: PrismaService) {
+	const validation = await prisma.validate.findFirst({
+		where: {
+			email: email,
+		}
+	});
+	if (validation) {
+		if (validation.expired_date > (new Date())) {
+			return JSON.stringify({status: 401, message: "Tarihi geçmiş bir doğrulama kodu girdiniz."})
+		} else {
+			if (validation.validcode == validationCode) {
+				return JSON.stringify({ status: 200 })
+			} else {
+				return JSON.stringify({ status: 401, message:"Doğrulama kodu uyuşmadı." })
+			}
+		}
+	} else {
+		 return JSON.stringify({status: 403, message: "Doğrulama kodu bulunamadı."})
+	}
+}

@@ -1,9 +1,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import * as useragent from 'express-useragent';
+import * as cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as requestIp from 'request-ip';
 import * as geoip from 'geoip-lite';
+
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
@@ -14,7 +16,8 @@ async function bootstrap() {
     next();
   });
 	app.enableCors();
-	app.use(requestIp.mw());
+	app.use(cookieParser());
+  app.use(requestIp.mw());
 	app.use(useragent.express());
 	await app.listen(3000);
 }
