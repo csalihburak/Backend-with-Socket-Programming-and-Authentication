@@ -9,6 +9,8 @@ import * as requestIp from 'request-ip';
 import * as geoip from 'geoip-lite';
 import * as express from 'express';
 import { join } from 'path';
+import * as ejs from 'ejs';
+
 async function bootstrap() {
 	const app = await NestFactory.create<NestExpressApplication>(AppModule);
 	app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
@@ -24,7 +26,9 @@ async function bootstrap() {
 	app.use(cookieParser());
 	app.use(requestIp.mw());
 	app.use(useragent.express());
-	app.useStaticAssets(join(__dirname, '..', 'static'));
+	app.useStaticAssets(join(__dirname, '..', 'views'));
+	app.engine('html', ejs.renderFile);
+	app.setViewEngine('html');
 	await app.listen(3000);
 }
 bootstrap();

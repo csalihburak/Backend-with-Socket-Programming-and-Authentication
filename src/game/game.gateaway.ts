@@ -86,16 +86,11 @@ function update() {
 	}
 }
 
-
-
-
-
-
 @WebSocketGateway()
 export class gameGateaway implements OnGatewayInit, OnGatewayDisconnect {
 	users: User[] = [];
 	usernames = [];
-	private connectedUsers: Record<string, any> = {};
+	private connectedUsers: Record<string, Socket> = {};
 
 	@WebSocketServer() server: Server;
 
@@ -111,20 +106,20 @@ export class gameGateaway implements OnGatewayInit, OnGatewayDisconnect {
 		user.socket = client;
 		this.connectedUsers[username] = client;
 		this.users.push(user);
-		//this.emitUserList();
+		this.emitUserList();
 	}
 
 	handleDisconnect(client: any) {
 		const username = client.handshake.query.username;
 		console.log(`Client disconnected: ${username}`);
 		delete this.connectedUsers[username];
-		//this.emitUserList();
+		this.emitUserList();
 	}
 
-/* 	private emitUserList() {
+	private emitUserList() {
 		const usernames = Object.keys(this.connectedUsers);
 		this.server.emit('userList', {usernames});
-	} */
+	}
 
 	@SubscribeMessage('prUp')
 	prup(client: Socket, key: any[]) {
@@ -166,7 +161,16 @@ export class gameGateaway implements OnGatewayInit, OnGatewayDisconnect {
 			user.socket.emit('update', {"ball": ball, "leftPaddle": leftPaddle, "rightPaddle": rightPaddle});
 
 		});
-	}; 
+	};
+	@SubscribeMessage('join')
+	joinGame(client: Socket, data) {
+		console.log(data);
+		this.connectedUsers[data].emit('request');
+		//this.connectedUsers[data].join('game')
+		//client.join('game');
+		delete this.connectedUsers[data];	
+	}
+
 
 
 }

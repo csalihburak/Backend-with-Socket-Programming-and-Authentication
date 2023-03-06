@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseInterceptors,UploadedFile, Req, BadRequestException, Res} from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseInterceptors,UploadedFile, Req, BadRequestException, Res, Render} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
@@ -36,13 +36,18 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-		console.log(req.file);
 		return this.authService.singup(req.body, file);
 	}
 
 	@Post('signin')
 	async signin(@Req() req: Request) {
 		return this.authService.signIn(req);
+	}
+
+	@Get('game')
+	@Render('game')
+	getPage2() {
+	return { title: 'Page 2' };
 	}
 
 	@Post('sendValidationCode')
