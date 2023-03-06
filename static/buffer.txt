@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Socket.IO Chat</title>
+		<style>
+			#chat-box {
+				width: 400px;
+				height: 300px;
+				border: 1px solid #ccc;
+				overflow-y: auto; /* otomatik kaydırma */
+			}
+
+			form {
+				margin-top: 10px;
+			}
+
+			input[type='text'] {
+				width: 300px;
+				height: 30px;
+				font-size: 16px;
+				padding: 5px;
+				border-radius: 5px;
+				border: 1px solid #ccc;
+			}
+
+			button[type='submit'] {
+				width: 80px;
+				height: 40px;
+				font-size: 16px;
+				border-radius: 5px;
+				border: none;
+				background-color: #4caf50;
+				color: #fff;
+			}
+			#user-list {
+				width: 400px;
+				height: 50px;
+				border: 1px solid #ccc;
+				margin-top: 10px;
+				padding: 10px;
+			}
+
+			#user-list li {
+				display: inline-block;
+				padding: 5px;
+				border: 1px solid #ccc;
+				margin-right: 10px;
+				cursor: pointer; /* kullanıcı adına tıklanabilir olmalı */
+			}
+		</style>
+	</head>
+	<body>
+		<div id="chat-box"></div>
+		<form id="message-form">
+			<input type="text" id="message-input" />
+			<button type="submit">Send</button>
+		</form>
+		<div id="user-list"></div>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			const urlParams = new URLSearchParams(window.location.search);
+			const username = urlParams.get('username');
+			const socket = io({ query: { username: username } });
+			console.log(username);
+
+			const form = document.getElementById('message-form');
+			const input = document.getElementById('message-input'); 
+			const chatBox = document.getElementById('chat-box'); 
+     		const userList = document.getElementById('user-list');
+
+			form.addEventListener('submit', (e) => {
+				e.preventDefault();
+				if (input.value) {
+					socket.emit('message', input.value);
+					input.value = '';
+				}
+			});
+
+			userList.addEventListener('click', (e) => {
+				// sadece <li> öğelerine tıklandığında işlem yap
+				if (e.target.nodeName === 'LI') {
+				  // tıklanan kullanıcının adını al
+				  const selectedUser = e.target.innerText;
+				  
+				  // özel mesaj göndermek üzere mesaj kutusunu güncelle
+				  input.value = `/msg ${selectedUser} `;
+				  input.focus();
+				}
+			  });
+
+			socket.on('message', (message) => {
+				const p = document.createElement('p'); /* <li> yerine <p> kullanıldı */
+				p.innerText = message;
+				chatBox.appendChild(p);
+				chatBox.scrollTop = chatBox.scrollHeight; /* otomatik kaydırma */
+			});
+			
+			socket.on('userList', (users) => {
+				userList.innerHTML = '';
+				const usr = users;
+				for (let i = 0; i < usr.length; i++) {
+				  const li = document.createElement('li');
+				  li.innerText = usr[i];
+				  li.addEventListener('click', () => {
+					const privateChatBox = document.getElementById('private-chat-box');
+					privateChatBox.style.display = 'block';
+					const privateChatName = document.getElementById('private-chat-name');
+					privateChatName.innerText = usr[i];
+					const privateChatInput = document.getElementById('private-chat-input');
+					privateChatInput.value = `/msg ${usr[i]} `;
+					privateChatInput.focus();
+				  });
+				  userList.appendChild(li);
+				}
+			  });
+			  
+			  const privateChatBox = document.createElement('div');
+			  privateChatBox.id = 'private-chat-box';
+			  privateChatBox.style.display = 'none';
+			  
+			  const privateChatHeader = document.createElement('div');
+			  privateChatHeader.id = 'private-chat-header';
+			  
+			  const privateChatName = document.createElement('span');
+			  privateChatName.id = 'private-chat-name';
+			  
+			  const privateChatClose = document.createElement('span');
+			  privateChatClose.id = 'private-chat-close';
+			  privateChatClose.innerText = 'x';
+			  privateChatClose.addEventListener('click', () => {
+				privateChatBox.style.display = 'none';
+			  });
+			  
+			  privateChatHeader.appendChild(privateChatName);
+			  privateChatHeader.appendChild(privateChatClose);
+			  
+			  const privateChatInput = document.createElement('input');
+			  privateChatInput.id = 'private-chat-input';
+			  privateChatInput.type = 'text';
+			  privateChatInput.addEventListener('keyup', (e) => {
+				if (e.key === 'Enter') {
+				  socket.emit('message', privateChatInput.value);
+				  privateChatInput.value = '';
+				}
+			  });
+			  
+			  privateChatBox.appendChild(privateChatHeader);
+			  privateChatBox.appendChild(privateChatInput);
+			  
+			  document.body.appendChild(privateChatBox);
+		</script>
+	</body>
+</html>

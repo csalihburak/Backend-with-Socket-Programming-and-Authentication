@@ -10,11 +10,9 @@ import { Request } from 'express';
 import { throwError } from 'rxjs';
 
 
-export async function startTransaction(prisma: PrismaService, info: any, req: Request) {
+export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient) {
     const sessionToken = crypto.randomBytes(32).toString('hex');
     const loginIp = req.ip.split(':')[3];
-  
-    const Prisma = new PrismaClient();
   
     try {
       const res = await Prisma.$transaction(async (tx) => {
@@ -76,7 +74,9 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
     } catch (error) {
       console.log(error);
       throw error;
-    }
+    } finally {
+		await Prisma.$disconnect();
+	  }
   }
   
 export async function check(body: any) {
@@ -86,17 +86,16 @@ export async function check(body: any) {
     userInput.twoFacAuth = body.twoFacAuth;
 	userInput.username = body.username;
   
-    const errors = await validate(userInput);
+/*     const errors = await validate(userInput);
   
     if (errors.length > 0) {
       throw new BadRequestException(errors);
-    }
+    } */
   
     return userInput;
   }
 
-  export async function validateUser(body: any, file: Express.Multer.File, prisma: PrismaService) {
-	const prismaClient = new PrismaClient();
+  export async function validateUser(body: any, file: Express.Multer.File, prisma: PrismaService, prismaClient: PrismaClient) {
 	try {
 	  const res = await prismaClient.$transaction(async () => {
 		const token = await prisma.sessionToken.findFirst({
@@ -113,7 +112,7 @@ export async function check(body: any) {
 		  select: { pass: true },
 		});
 		if (user.pass) {
-		  return [403, JSON.stringify({ status: 403, message: "User already saved to database." })];
+		  return [403, JSON.stringify({ status: 200 })];
 		}
   
 		const password = crypto.createHash('sha256')

@@ -1,46 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Socket.IO Chat App</title>
-  </head>
-  <body>
-    <div id="messages"></div>
-    <form id="form">
-      <select id="recipient">
-        <option value="">Select a recipient</option>
-        <option value="Alice">Alice</option>
-        <option value="Bob">Bob</option>
-        <option value="Charlie">Charlie</option>
-      </select>
-      <input type="text" id="input" autocomplete="off" placeholder="Type your message...">
-      <button>Send</button>
-    </form>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      const socket = io();
+<html>
+<head>
+	<title>Multiplayer Ping Pong Game</title>
+	<style>
+		#canvas {
+			border: 1px solid black;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" width="600" height="400" color="red"></canvas>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		// define canvas
+		const socket = io();
+		var canvas = document.getElementById("canvas");
+		var ctx = canvas.getContext("2d");
+		// define paddles and ball
+		var ball = {
+			x: canvas.width/2,
+			y: canvas.height/2,
+			radius: 10,
+			speed: 3,
+			velocityX: 5,
+			velocityY: 5,
+			color: "black"
+		};
+		var paddleHeight = 100;
+		var paddleWidth = 10;
+		var leftPaddle = {
+			x: 0,
+			y: canvas.height/2 - paddleHeight/2,
+			width: paddleWidth,
+			height: paddleHeight,
+			color: "red",
+			score: 0
+		};
+		var rightPaddle = {
+			x: canvas.width - paddleWidth,
+			y: canvas.height/2 - paddleHeight/2,
+			width: paddleWidth,
+			height: paddleHeight,
+			color: "green",
+			score: 0
+		};
 
-      const form = document.getElementById('form');
-      const input = document.getElementById('input');
-      const recipient = document.getElementById('recipient');
-      const messages = document.getElementById('messages');
+		// draw ball
+		function drawBall() {
+			ctx.beginPath();
+			ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2, false);
+			ctx.fillStyle = ball.color;
+			ctx.fill();
+			ctx.closePath();
+		}
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (recipient.value && input.value) {
-          socket.emit('message', { recipient: recipient.value, text: input.value });
-          input.value = '';
-        }
-      });
+		// draw paddles
+		function drawPaddle(paddle) {
+			ctx.fillStyle = paddle.color;
+			ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+		}
 
-      socket.on('message', (message) => {
-        const li = document.createElement('li');
-        li.innerText = `${message.sender}: ${message.text}`;
-        messages.appendChild(li);
-      });
-    </script>
-  </body>
-</html>
+		// draw scores
+		function drawScores() {
+			ctx.font = "20px Arial";
+			ctx.fillStyle = "red";
+			ctx.fillText("Player 1: " + leftPaddle.score, 20, 20);
+			ctx.fillText("Player 2: " + rightPaddle.score, canvas.width - 120, 20);
+		}
 
+		// update position of paddles and ball
+		socket.on('update', args => {
+			ball = args.ball;
+			leftPaddle = args.leftPaddle;
+			rightPaddle = args.rightPaddle;
+		})
+		function update() {
+			socket.emit('update');
+			//ball.x += ball.velocityX;
+			//ball.y += ball.velocityY;
+//
+			//// check for collision with walls
+			//if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+			//	ball.velocityY = -ball.velocityY;
+			//}
+//
+			//if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+			//	ball.velocityX = -ball.velocityX;
+			// }
+//
+			//// check for collision with left paddle
+			//if (ball.x - ball.radius < leftPaddle.x + leftPaddle.width && ball.y > leftPaddle.y && ball.y < leftPaddle.y + leftPaddle.height) {
+			//	ball.velocityX = -ball.velocityX;
+			//	leftPaddle.score++;
+			//}
+//
+			//// check for collision with right paddle
+			//if (ball.x + ball.radius > rightPaddle.x && ball.y > rightPaddle.y && ball.y < rightPaddle.y + rightPaddle.height) {
+			//	ball.velocityX = -ball.velocityX;
+			//	rightPaddle.score++;
+			//}
+//
+			//// move left paddle
+			//if (upPressed && leftPaddle.y > 0) {
+			//	leftPaddle.y -= 7;
+			//} else if (downPressed && leftPaddle.y < canvas.height - leftPaddle.height) {
+			//	leftPaddle.y += 7;
+			//}
+//
+			//// move right
+			//// move right paddle
+			//if (upPressed2 && rightPaddle.y > 0) {
+			//	rightPaddle.y -= 7;
+			//} else if (downPressed2 && rightPaddle.y < canvas.height - rightPaddle.height) {
+			//	rightPaddle.y += 7;
+			//}
+		}
+
+		// clear canvas and draw elements
+		function render() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			drawBall();
+			drawPaddle(leftPaddle);
+			drawPaddle(rightPaddle);
+			drawScores();
+		}
+
+		// main game loop
+		function gameLoop() {
+			update();
+			render();
+		}
+
+		// handle key eventsw
+		
+		document.addEventListener("keyup", function(event) {
+			socket.emit('prUp', [event.key, ball, leftPaddle, rightPaddle]);
+		});
+		document.addEventListener("keydown", function(event) {
+			socket.emit('prDown', [event.key, ball, leftPaddle, rightPaddle]);
+		});
+		socket.on('pressedDown', (key) => {
+		});
+
+		socket.on('presedUp', (key) => {
+
+		});
+
+
+		// start game
+		setInterval(gameLoop, 1000/60);
+	</script>
+</body>
 </html>

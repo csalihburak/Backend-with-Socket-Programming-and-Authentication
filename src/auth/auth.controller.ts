@@ -14,40 +14,30 @@ export class AuthController {
 	async firstInsert(@Query() query, @Req() req: Request, @Res() res: Response) {
 		if (!query.code)
 			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
-		const response = await this.authService.intraGet(query.code, req);
-		const parse = JSON.parse(response);
-
-			//res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
+			const response = await this.authService.intraGet(query.code, req);
+			const parse = JSON.parse(response);
+			res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
 			res.setHeader('Set-Cookie', [`sessionToken=${parse.token}; Path=/; HttpOnly`]);
-			res.redirect(`http://142.93.164.123:3000/auth/login-page`);
+			res.redirect(`http://142.93.104.99:3000/setProfile?sessionToken=${parse.token}`);
 	}
 
- 	@Get('login-page')
-	async getLoginPage(@Res() res: Response, @Req() req: Request) {
-		console.log(req.headers);
-	  const html = `
-		<html>
-		  <head>
-			<title>Login Page</title>
-		  </head>
-		  <body>
-			<form method="post" action="/auth/login">
-			  <label for="username">Username:</label>
-			  <input type="text" id="username" name="username"><br><br>
-			  <label for="password">Password:</label>
-			  <input type="password" id="password" name="password"><br><br>
-			  <input type="submit" value="Submit">
-			</form>
-		  </body>
-		</html>
-	  `;
-	  res.send(html);
-	} 
 	@Post('signup')
-	async signup(@Body() body: any) {
-		console.log("test:");
-		var file: Express.Multer.File;
-		return this.authService.singup(body, file);
+	@UseInterceptors(
+		FileInterceptor('avatar', {
+			storage: diskStorage({
+				destination: './avatars/',
+				filename: (req, file, callback) => {
+					const uniqsuffix = Date.now() + '-' + Math.round(Math.random() + 1e9);
+					const ext = extname(file.originalname);
+					const filename = `${file.originalname}-${uniqsuffix}${ext}`;
+					callback(null, filename);
+				},
+			}),
+		}),
+	)
+	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+		console.log(req.file);
+		return this.authService.singup(req.body, file);
 	}
 
 	@Post('signin')

@@ -1,10 +1,10 @@
-import { GameModule } from './game/game.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { chatGateAWay } from './chat/chat.gateway';
-import { Module } from '@nestjs/common';
-
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { CorsMiddleware } from '@nest-middlewares/cors';
+import { gameGateaway } from './game/game.gateaway'
+ 
 @Module({
-  imports: [AuthModule, chatGateAWay, GameModule, PrismaModule],
+  imports: [AuthModule, PrismaModule, gameGateaway],
 })
 export class AppModule {}
