@@ -1,155 +1,198 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>Multiplayer Ping Pong Game</title>
-	<style>
-		#canvas {
-			border: 1px solid black;
-		}
-	</style>
-</head>
-<body>
-	<canvas id="canvas" width="600" height="400" color="red"></canvas>
-	<script src="/socket.io/socket.io.js"></script>
-	<script>
-		// define canvas
-		const socket = io();
-		var canvas = document.getElementById("canvas");
-		var ctx = canvas.getContext("2d");
-		// define paddles and ball
-		var ball = {
-			x: canvas.width/2,
-			y: canvas.height/2,
-			radius: 10,
-			speed: 3,
-			velocityX: 5,
-			velocityY: 5,
-			color: "black"
-		};
-		var paddleHeight = 100;
-		var paddleWidth = 10;
-		var leftPaddle = {
-			x: 0,
-			y: canvas.height/2 - paddleHeight/2,
-			width: paddleWidth,
-			height: paddleHeight,
-			color: "red",
-			score: 0
-		};
-		var rightPaddle = {
-			x: canvas.width - paddleWidth,
-			y: canvas.height/2 - paddleHeight/2,
-			width: paddleWidth,
-			height: paddleHeight,
-			color: "green",
-			score: 0
-		};
+	<head>
+		<title>Multiplayer Ping Pong Game</title>
+		<style>
+			body {
+				background-color: #222;
+				color: white;
+				font-family: Arial, sans-serif;
+				font-size: 16px;
+			}
 
-		// draw ball
-		function drawBall() {
-			ctx.beginPath();
-			ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2, false);
-			ctx.fillStyle = ball.color;
-			ctx.fill();
-			ctx.closePath();
-		}
+			#canvas-container {
+				width: 800px;
+				margin: 0 auto;
+				margin-top: 200px;
+				position: relative;
+				margin-left: 700px;
+			}
 
-		// draw paddles
-		function drawPaddle(paddle) {
-			ctx.fillStyle = paddle.color;
-			ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
-		}
+			#canvas {
+				border: 5px solid white;
+				display: block;
+				margin: 0 auto;
+			}
 
-		// draw scores
-		function drawScores() {
-			ctx.font = "20px Arial";
-			ctx.fillStyle = "red";
-			ctx.fillText("Player 1: " + leftPaddle.score, 20, 20);
-			ctx.fillText("Player 2: " + rightPaddle.score, canvas.width - 120, 20);
-		}
+			#start-game-btn,
+			#join-game-btn {
+				background-color: white;
+				border: none;
+				border-radius: 5px;
+				color: #222;
+				cursor: pointer;
+				font-size: 18px;
+				font-weight: bold;
+				margin-top: 20px;
+				padding: 10px 20px;
+				text-transform: uppercase;
+				transition: background-color 0.2s ease-in-out;
+			}
 
-		// update position of paddles and ball
-		socket.on('update', args => {
-			ball = args.ball;
-			leftPaddle = args.leftPaddle;
-			rightPaddle = args.rightPaddle;
-		})
-		function update() {
-			socket.emit('update');
-			//ball.x += ball.velocityX;
-			//ball.y += ball.velocityY;
-//
-			//// check for collision with walls
-			//if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
-			//	ball.velocityY = -ball.velocityY;
-			//}
-//
-			//if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
-			//	ball.velocityX = -ball.velocityX;
-			// }
-//
-			//// check for collision with left paddle
-			//if (ball.x - ball.radius < leftPaddle.x + leftPaddle.width && ball.y > leftPaddle.y && ball.y < leftPaddle.y + leftPaddle.height) {
-			//	ball.velocityX = -ball.velocityX;
-			//	leftPaddle.score++;
-			//}
-//
-			//// check for collision with right paddle
-			//if (ball.x + ball.radius > rightPaddle.x && ball.y > rightPaddle.y && ball.y < rightPaddle.y + rightPaddle.height) {
-			//	ball.velocityX = -ball.velocityX;
-			//	rightPaddle.score++;
-			//}
-//
-			//// move left paddle
-			//if (upPressed && leftPaddle.y > 0) {
-			//	leftPaddle.y -= 7;
-			//} else if (downPressed && leftPaddle.y < canvas.height - leftPaddle.height) {
-			//	leftPaddle.y += 7;
-			//}
-//
-			//// move right
-			//// move right paddle
-			//if (upPressed2 && rightPaddle.y > 0) {
-			//	rightPaddle.y -= 7;
-			//} else if (downPressed2 && rightPaddle.y < canvas.height - rightPaddle.height) {
-			//	rightPaddle.y += 7;
-			//}
-		}
+			#start-game-btn:hover,
+			#join-game-btn:hover {
+				background-color: #ccc;
+			}
 
-		// clear canvas and draw elements
-		function render() {
-			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			#name {
+				background-color: #444;
+				border: none;
+				border-radius: 5px;
+				color: white;
+				font-size: 18px;
+				padding: 10px 20px;
+				margin-right: 20px;
+				width: 200px;
+			}
 
-			drawBall();
-			drawPaddle(leftPaddle);
-			drawPaddle(rightPaddle);
-			drawScores();
-		}
+			#name:focus {
+				outline: none;
+			}
 
-		// main game loop
-		function gameLoop() {
-			update();
-			render();
-		}
+			#scoreboard {
+				display: flex;
+				justify-content: space-between;
+				margin-top: 20px;
+			}
 
-		// handle key eventsw
-		
-		document.addEventListener("keyup", function(event) {
-			socket.emit('prUp', [event.key, ball, leftPaddle, rightPaddle]);
-		});
-		document.addEventListener("keydown", function(event) {
-			socket.emit('prDown', [event.key, ball, leftPaddle, rightPaddle]);
-		});
-		socket.on('pressedDown', (key) => {
-		});
+			#player1-score,
+			#player2-score {
+				font-size: 24px;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="canvas-container">
+			<canvas id="canvas" width="1200" height="600"></canvas>
+			<img
+				id="ball"
+				src="https://i.imgur.com/dVZUGi1.png"
+				style="display: none"
+			/>
+			<img
+				id="left-paddle"
+				src="https://i.imgur.com/VF1GY8s.png"
+				style="display: none"
+			/>
+			<img
+				id="right-paddle"
+				src="https://i.imgur.com/VF1GY8s.png"
+				style="display: none"
+			/>
+		</div>
+		<div id="controls">
+			<input type="text" id="name" placeholder="Room name" />
+			<button id="start-game-btn">Start Game</button>
+			<button id="join-game-btn">Join Game</button>
+		</div>
+		<div id="scoreboard">
+			<div id="player1-score">Player 1: 0</div>
+			<div id="player2-score">Player 2: 0</div>
+		</div>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			const socket = io('142.93.164.123:3000/game');
+			var canvas = document.getElementById('canvas');
+			var ctx = canvas.getContext('2d');
+			var ball = {};
+			var leftPaddle = {};
+			var rightPaddle = {};
+			var leftPlayer = {};
+			var rightPlayer = {};
+			var game = {};
 
-		socket.on('presedUp', (key) => {
+			function drawBall() {
+				ctx.beginPath();
+				ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2, false);
+				ctx.fillStyle = ball.color;
+				ctx.fill();
+				ctx.closePath();
+			}
 
-		});
+			function drawPaddle(paddle) {
+				ctx.fillStyle = paddle.color;
+				ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+			}
 
+			function drawScores() {
+				console.log(game.rightPlayer);
+				ctx.font = '20px Arial';
+				ctx.fillStyle = 'red';
+				ctx.fillText(leftPlayer.name + ': '+ leftPlayer.score, 20, 20);
+				ctx.fillText(rightPlayer.name + ': ' + rightPlayer.score, canvas.width - 120, 20);
+			}
 
-		// start game
-		setInterval(gameLoop, 1000/60);
-	</script>
-</body>
+			socket.on('update', (args) => {
+				console.log(args);
+				ball = args.ball;
+				leftPlayer = args.leftPlayer;
+				rightPlayer = args.rightPlayer;
+				leftPaddle = leftPlayer.paddle;
+				rightPaddle = rightPlayer.paddle;
+			});
+
+			function update() {
+				socket.emit('update', [game]);
+			}
+
+			socket.on('test', (data) => {
+				console.log(data);
+			});
+
+			function render() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				drawBall();
+				drawPaddle(leftPaddle);
+				drawPaddle(rightPaddle);
+				drawScores();
+			}
+
+			function gameLoop() {
+				update();
+				render();
+			}
+
+			document.addEventListener('keyup', function (event) {
+				socket.emit('prUp', [event.key, ball, leftPaddle, rightPaddle]);
+			});
+			document.addEventListener('keydown', function (event) {
+				socket.emit('prDown', [event.key, ball, leftPaddle, rightPaddle]);
+			});
+
+			const startGameBtn = document.getElementById('start-game-btn');
+			startGameBtn.addEventListener('click', function () {
+				const name = document.getElementById('name').value;
+				socket.emit('start', [name], (data) => {
+					game = data;
+					console.log(game);
+				});
+				setInterval(gameLoop, 1000 / game.fps);
+				startGameBtn.disabled = true;
+				canvas.focus();
+			});
+
+			const join = document.getElementById('join-game-btn');
+			join.addEventListener('click', function () {
+				const name = document.getElementById('name').value;
+				socket.emit('join', [name], (data) => {
+					game = data;
+					console.log(game);
+					setInterval(gameLoop, 1000 / game.fps);
+				});
+				startGameBtn.disabled = true;
+				canvas.focus();
+			});
+		</script>
+	</body>
 </html>

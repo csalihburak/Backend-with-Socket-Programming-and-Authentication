@@ -40,8 +40,7 @@ export class UserInputDto {
 	})
 	password: string;
 
-	@IsBoolean()
-	twoFacAuth: string;
+	twoFacAuth: boolean;
 
 	@IsNotEmpty({message: 'Username can not be empty.'})
     username: string

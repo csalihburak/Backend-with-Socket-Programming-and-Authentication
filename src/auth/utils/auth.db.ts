@@ -18,10 +18,9 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
       const res = await Prisma.$transaction(async (tx) => {
         const user = await prisma.user.findUnique({
           where: {
-            username: info.username,
+            email: info.email,
           },
         });
-  
         if (!user) {
           const user = await prisma.user.create({
             data: {
@@ -46,7 +45,8 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
           throw JSON.stringify({
             status: 203,
             message: 'User created without password',
-            token: tokenCreated.token
+            token: tokenCreated.token,
+			imageUrl: info.pictureUrl
           });
         } else {
           const tokenCreated = await prisma.sessionToken.create({
@@ -61,18 +61,19 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
             throw JSON.stringify({
               status: 401,
               message: 'user exist without password',
-              token: tokenCreated.token
+              token: tokenCreated.token,
+				imageUrl: info.pictureUrl
             });
           } else {
             throw JSON.stringify({
               status: 200,
-              token: tokenCreated.token
+              token: tokenCreated.token,
+			  twoFacAuth: user.two_factor_auth,
             });
           }
         }
       });
     } catch (error) {
-      console.log(error);
       throw error;
     } finally {
 		await Prisma.$disconnect();
@@ -83,7 +84,10 @@ export async function check(body: any) {
     const userInput = new UserInputDto();
     userInput.password = body.password;
     userInput.sessionToken = body.sessionToken;
-    userInput.twoFacAuth = body.twoFacAuth;
+	if (body.twoFacAuth == "true")
+    	userInput.twoFacAuth = true;
+	else 
+		userInput.twoFacAuth = false;
 	userInput.username = body.username;
   
 /*     const errors = await validate(userInput);
@@ -104,7 +108,7 @@ export async function check(body: any) {
 		  },
 		});
 		if (!token) {
-		  return [403, JSON.stringify({ status: 403, message: "Session not found." })];
+		  return JSON.stringify({ status: 403, message: "Session not found." });
 		}
   
 		const user = await prisma.user.findUnique({
@@ -112,7 +116,7 @@ export async function check(body: any) {
 		  select: { pass: true },
 		});
 		if (user.pass) {
-		  return [403, JSON.stringify({ status: 200 })];
+		  return JSON.stringify({ status: 200 });
 		}
   
 		const password = crypto.createHash('sha256')
@@ -121,8 +125,8 @@ export async function check(body: any) {
   
 		const data: any = {
 		  pass: password,
-		  two_factor_auth: body.twoFacAuth,
-		  username: body.username,
+		  two_factor_auth: body.info.twoFacAuth,
+		  username: body.info.username,
 		};
 		if (file) {
 		  data.pictureUrl = file.path;
@@ -133,10 +137,10 @@ export async function check(body: any) {
 			where: { id: token.userId },
 			data,
 		  });
-		  return [200, JSON.stringify({ status: 200, message: `${body.username} saved successfully.` })];
+		  return JSON.stringify({ status: 200, message: `${body.username} saved successfully.` });
 		} catch (error) {
 		  if (error.code === 'P2002') {
-			return [403, JSON.stringify({ status: 403, message: `Username ${body.username} already exists.` })];
+			return JSON.stringify({ status: 403, message: `Username ${body.username} already exists.` });
 		  }
 		  throw error;
 		}
@@ -177,7 +181,7 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 								token: sessionToken,
 							},
 						});
-						return JSON.stringify({status: 200, token: tokenCreated.token});
+						return JSON.stringify({status: 200, token: tokenCreated.token, twoFacAuth: resultInfo.two_factor_auth});
 					} else {
 						throw JSON.stringify({status: 203, message: "Passsword is wrong."});
 					}
@@ -194,7 +198,7 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 export async function getSession(req: Request, prisma: PrismaService) : Promise<User> {
 	const token = await prisma.sessionToken.findFirst({
 		where: {
-			token: req.body.token,
+			token: req.body.sessionToken,
 		},
 	});
 	if (token) {

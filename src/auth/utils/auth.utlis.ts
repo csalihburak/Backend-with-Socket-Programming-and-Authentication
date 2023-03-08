@@ -34,9 +34,9 @@ export async function sendCode(data: any, validCode: number, mailerService: Mail
 		})
 		const deleted = await prisma.validate.deleteMany({
 			where: {
+					userId: user.id,
 			  NOT: [
 				{
-					userId: user.id,
 					validcode: validCode,
 				},
 			  ],
@@ -54,15 +54,11 @@ export async function codeValidation(email: string, validationCode: number, pris
 			email: email,
 		}
 	});
-	if (validation) {
-		if (validation.expired_date > (new Date())) {
-			return JSON.stringify({status: 401, message: "Tarihi geçmiş bir doğrulama kodu girdiniz."})
+	if (validation) { // tarihi ekle
+		if (validation.validcode == validationCode) {
+			return JSON.stringify({ status: 200 })
 		} else {
-			if (validation.validcode == validationCode) {
-				return JSON.stringify({ status: 200 })
-			} else {
-				return JSON.stringify({ status: 401, message:"Doğrulama kodu uyuşmadı." })
-			}
+			return JSON.stringify({ status: 401, message:"Doğrulama kodu uyuşmadı." })
 		}
 	} else {
 		 return JSON.stringify({status: 403, message: "Doğrulama kodu bulunamadı."})

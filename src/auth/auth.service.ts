@@ -26,9 +26,9 @@ export class AuthService {
 	async singup(body: any, file: Express.Multer.File) {
 		try {
 			const info = await check(body);
+			body.info = info;
 			const user = await validateUser(body, file, this.prisma, this.prismaClient);
-			throw user[1];
-				
+			return user;
 		} catch (error) {
 			return error;
 		}
@@ -45,7 +45,7 @@ export class AuthService {
 	async sendValidationCode(req) {
 		try {
 			const user = await getSession(req, this.prisma);
-			if (user.two_factor_auth == true) {
+			if (user.two_factor_auth) {
 				let validCode = Math.floor((Math.random() * 9999) + 1000);
 				await sendCode({
 					user: user,
@@ -54,7 +54,7 @@ export class AuthService {
 					browser: req.useragent.browser,
 
 				}, validCode, this.mailerService, this.prisma);
-				return JSON.stringify({status: 403, message: "Email sent succesfully."});
+				return JSON.stringify({status: 403, message: "Email sent succesfully.", email: user.email});
 			} else {
 				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."});
 			}
@@ -67,8 +67,7 @@ export class AuthService {
 		try {
 			if (!req.body.email) {
 				return JSON.stringify({status: 403, message: "Mail adresini kontrol ediniz."})
-			} else if (!req.body.code
-				) {
+			} else if (!req.body.code) {
 				return JSON.stringify({status: 403, message: "Doğrulama kodunu kontrol ediniz."})
 			} else {
 				return codeValidation(req.body.email, parseInt(req.body.code), this.prisma);
