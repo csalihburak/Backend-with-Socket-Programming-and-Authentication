@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { Socket } from 'socket.io';
+import { Room } from '../game.service';
 
 interface Player {
 	id: string;
@@ -15,6 +17,8 @@ export class Game {
 		height: 600,
 	};
 
+	users: { [key: string]: string } = {};
+
 	leftPlayer = {
 		id: '',
 		name: '',
@@ -22,7 +26,7 @@ export class Game {
 			x: 0,
 			y: this.canvas.height / 2 - 50,
 			width: 10,
-			height: 100,
+			height: 130,
 			color: '#2196f3',
 			speed: 10,
 		},
@@ -36,7 +40,7 @@ export class Game {
 			x: this.canvas.width - 10,
 			y: this.canvas.height / 2 - 50,
 			width: 10,
-			height: 100,
+			height: 130,
 			color: '#2196f3',
 			speed: 10,
 		},
@@ -48,11 +52,13 @@ export class Game {
 	ball = {
 		x: this.canvas.width / 2,
 		y: this.canvas.height / 2,
-		radius: 10,
-		color: '#f44336',
-		speed: 7,
+		radius: 15,
+		color: '#ff69b4',
+		speed: 5,
 		velocityX: 5,
 		velocityY: 5,
+		shadowColor: 'rgba(255, 105, 180, 0.8)',
+		shadowBlur: 20,
 		reset() {
 			this.x = this.canvas.width / 2;
 			this.y = this.canvas.height / 2;
@@ -61,27 +67,6 @@ export class Game {
 		},
 	};
 
-	paddleHeight = 100;
-	paddleWidth = 10;
-	leftPaddle = {
-		x: 0,
-		y: this.canvas.height / 2 - 50,
-		width: 10,
-		height: 100,
-		color: '#2196f3',
-		speed: 10,
-		score: 0,
-	};
-
-	rightPaddle = {
-		x: this.canvas.width - 10,
-		y: this.canvas.height / 2 - 50,
-		width: 10,
-		height: 100,
-		color: '#26f3',
-		speed: 10,
-		score: 0,
-	};
 	upPressed = false;
 	downPressed = false;
 	wPressed = false;
@@ -90,7 +75,19 @@ export class Game {
 	downPressed2 = false;
 }
 
-export function update(game: Game) {
+function resetGame(game: Game) {
+	game.ball.x = game.canvas.width / 2;
+	game.ball.y =  game.canvas.height / 2;
+	game.rightPlayer.paddle.x = game.canvas.width - 10,
+	game.rightPlayer.paddle.y =  game.canvas.height / 2 - 50;
+	game.leftPlayer.paddle.x = 0;
+	game.leftPlayer.paddle.y = game.canvas.height / 2 - 50;
+}
+
+
+export function update(room: Room) {
+
+	let game = room.game;
 	game.ball.x += game.ball.velocityX;
 	game.ball.y += game.ball.velocityY;
 
@@ -107,6 +104,7 @@ export function update(game: Game) {
 	) {
 		game.ball.velocityX = +game.ball.velocityX;
 	}
+
 	if (game.ball.x > game.canvas.width - game.ball.radius) {
 		game.ball.velocityX = -game.ball.velocityX;
 		game.leftPlayer.score++;
@@ -129,8 +127,8 @@ export function update(game: Game) {
 		game.ball.y + game.ball.radius + 2 >= game.rightPlayer.paddle.y &&
 		game.ball.y + game.ball.radius + 2 <=
 			game.rightPlayer.paddle.y + game.rightPlayer.paddle.height &&
-		game.ball.x + game.ball.radius + 2 >=
-			game.canvas.width - game.rightPaddle.width
+		game.ball.x + game.ball.radius >=
+			game.canvas.width - game.rightPlayer.paddle.width
 	) {
 		game.ball.velocityX = +game.ball.velocityX;
 	}
@@ -139,7 +137,8 @@ export function update(game: Game) {
 		game.leftPlayer.paddle.y -= 7;
 	} else if (
 		game.downPressed &&
-		game.leftPlayer.paddle.y < game.canvas.height - game.leftPlayer.paddle.height
+		game.leftPlayer.paddle.y <
+			game.canvas.height - game.leftPlayer.paddle.height
 	) {
 		game.leftPlayer.paddle.y += 7;
 	}
@@ -148,7 +147,8 @@ export function update(game: Game) {
 		game.rightPlayer.paddle.y -= 7;
 	} else if (
 		game.downPressed2 &&
-		game.rightPlayer.paddle.y < game.canvas.height - game.rightPlayer.paddle.height
+		game.rightPlayer.paddle.y <
+			game.canvas.height - game.rightPlayer.paddle.height
 	) {
 		game.rightPlayer.paddle.y += 7;
 	}

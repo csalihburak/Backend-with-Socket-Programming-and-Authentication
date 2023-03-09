@@ -1,59 +1,128 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8" />
-		<title>First game</title>
-	</head>
-	<body>
-		<h1>Enter your name:</h1>
-		<form>
-			<input type="text" id="name" placeholder="Your name here" />
-			<button type="button" onclick="redirectToPage()">Submit</button>
-			<button type="button" onclick="join()">Join</button>
-
-		</form>
-
-		<h2>Connected Users:</h2>
-		<ul id="user-list"></ul>
-
-		<script src="https://cdn.socket.io/4.3.1/socket.io.min.js"></script>
-		<script>
-			const name = window.location.search.split('=')[1];
-
-			const socket = io('142.93.164.123:3000/game', {
-				query: {
-					username: name,
-				},
-			});
-			const userList = document.getElementById('user-list');
-
-			function redirectToPage() {
-				const name = document.getElementById('name').value;
-				socket.emit('create', [name]);
-				window.location.href = `http://142.93.164.123:3000/auth/game?name=${name}`;
+<head>
+	<title>Simple Chat Box</title>
+	<style>
+		.chat-card {
+			border: 2px solid #9c27b0;
+			border-radius: 10px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			font-family: Arial, sans-serif;
+			width: 400px;
+			height: 500px;
+		}
+		
+		.chat-header {
+			background-color: #9c27b0;
+			border-radius: 10px 10px 0 0;
+			color: #fff;
+			padding: 20px;
+			text-align: center;
+		}
+		
+		.chat-body {
+			height: 370px;
+			overflow-y: scroll;
+			padding: 20px;
+		}
+		
+		.message {
+			display: flex;
+			align-items: flex-end;
+			margin-bottom: 20px;
+		}
+		
+		.message-content {
+			background-color: #fff;
+			border-radius: 10px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			padding: 10px;
+			position: relative;
+		}
+		
+		.message-content p {
+			margin: 0;
+		}
+		
+		.message-time {
+			color: #9c27b0;
+			font-size: 12px;
+			position: absolute;
+			bottom: -18px;
+			right: 10px;
+		}
+		
+		.from-me .message-content {
+			background-color: #f2f2f2;
+		}
+		
+		.avatar {
+			border-radius: 50%;
+			height: 40px;
+			margin-right: 10px;
+			width: 40px;
+		}
+		
+		.chat-footer {
+			background-color: #f2f2f2;
+			border-top: 2px solid #9c27b0;
+			border-radius: 0 0 10px 10px;
+			padding: 20px;
+			text-align: center;
+		}
+		
+		.chat-footer input[type="text"] {
+			border: none;
+			border-radius: 10px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			padding: 10px;
+			margin-right: 10px;
+			width: 70%;
+		}
+		
+		.chat-footer button {
+			background-color: #9c27b0;
+			border: none;
+			border-radius: 10px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+			color: #fff;
+			cursor: pointer;
+			padding: 10px 20px;
+			transition: background-color 0.3s ease;
+		}
+		
+		.chat-footer button:hover {
+			background-color: #7b1fa2;
+		}			
+		
+	</style>
+</head>
+<body>
+	<div class="chat-card">
+		<div class="chat-header">
+			<h2>Chat Box</h2>
+		</div>
+		<div class="chat-body"></div>
+		<div class="chat-footer">
+			<input type="text" placeholder="Type your message here...">
+			<button>Send</button>
+		</div>
+	</div>
+	<script>
+		function sendMessage() {
+			var userMessage = document.getElementById("user-message").value;
+			if (userMessage != "") {
+				var chatbox = document.getElementsByClassName("chatbox")[0];
+				var messageContainer = document.createElement("div");
+				var messageText = document.createElement("p");
+				messageText.innerHTML = userMessage;
+				messageContainer.appendChild(messageText);
+				messageContainer.classList.add("message", "from-me");
+				chatbox.appendChild(messageContainer);
+				document.getElementById("user-message").value = "";
+				chatbox.scrollTop = chatbox.scrollHeight;
 			}
-
-			function join() {
-				const name = document.getElementById('name').value;
-				socket.emit('join', [name]);
-				//window.location.href = `http://142.93.164.123:3000/auth/game?name=${name}`;
-			}
-
-			socket.on('request', () => {
-				const name = window.location.search.split('=')[1];
-				window.location.href = `http://142.93.164.123:3000/auth/game?name=${name}`;
-			});
-
-			socket.on('userList', (users) => {
-				userList.innerHTML = '';
-				users = users.usernames;
-				for (var i = 0; i < users.length; i++) {
-					const li = document.createElement('li');
-					li.innerText = users;
-					userList.appendChild(li);
-					console.log(li);
-				}
-			});
-		</script>
-	</body>
+		}
+	</script>
+</body>
 </html>

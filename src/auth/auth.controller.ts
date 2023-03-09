@@ -52,7 +52,7 @@ export class AuthController {
 	async signin(@Req() req: Request, @Res() res: Response) {
 		const result = await this.authService.signIn(req);
 		const parse = JSON.parse(result);
-		if (parse.status == 200 && parse.twoFacAuth == true) {
+		if (parse.status == 200) {
 			res.send(JSON.stringify({status: parse.status, sessionToken: parse.token, twoFacAuth: parse.twoFacAuth}));
 		} else {
 			console.log(parse);

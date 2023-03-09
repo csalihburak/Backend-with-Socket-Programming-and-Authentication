@@ -60,19 +60,17 @@ export class GameService {
 
     async join(client: Socket, data: any[]) {
         const room = await this.getRoomById(data[0]);
-        if (room) {     
-            const user = await this.getClientById(client);
-            client.join(data[0]);
-            room.users.push(user);
-            room.status = 1;
-            client.join(room.id);
-            this.rooms.push(room);
-            user.rooms.push(room);
-        }
+        const user = await this.getClientById(client);
+        client.join(data[0]);
+        room.users.push(user);
+        room.status = 1;
+        client.join(room.id);
+        this.rooms.push(room);
+        user.rooms.push(room);
     }
 
     async addRoom(name: string) : Promise<Room>{
-		const game = new Game();
+        const game = new Game();
         const room = new Room();
         room.id = name;
         room.game = game;

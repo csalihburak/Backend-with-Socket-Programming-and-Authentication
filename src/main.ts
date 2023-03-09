@@ -26,7 +26,9 @@ async function bootstrap() {
 	app.use(cookieParser());
 	app.use(requestIp.mw());
 	app.use(useragent.express());
+	app.use('/', express.static('../views/'));
 	app.useStaticAssets(join(__dirname, '..', 'views'));
+	app.engine('html', ejs.renderFile);
 	app.engine('html', ejs.renderFile);
 	app.setViewEngine('html');
 	await app.listen(3000);
