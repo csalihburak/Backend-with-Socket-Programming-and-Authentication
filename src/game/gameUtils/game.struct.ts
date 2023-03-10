@@ -47,12 +47,12 @@ export class Game {
 		score: 0,
 	};
 	client: Socket;
-	fps: number = 30;
+	fps: number = 60;
 
 	ball = {
 		x: this.canvas.width / 2,
 		y: this.canvas.height / 2,
-		radius: 15,
+		radius: 10,
 		color: '#ff69b4',
 		speed: 5,
 		velocityX: 5,

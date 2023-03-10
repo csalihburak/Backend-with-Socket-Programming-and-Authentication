@@ -2,11 +2,20 @@ import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, SubscribeMessa
 import { Server, Socket } from 'socket.io';
 import { GameService, User, Room } from './game.service';
 import { Game, update, prup, prdown } from './gameUtils/game.struct';
+import { Controller, Get, Header } from '@nestjs/common';
 
 
 
 
-@WebSocketGateway({namespace: '/game'})
+@WebSocketGateway({
+	namespace: '/game',
+	cors: {
+	  origin: 'http://142.93.164.123:3001',
+	  methods: ['GET', 'POST'],
+	  allowedHeaders: ['Content-Type', 'Authorization'],
+	  credentials: true,
+	},
+  })
 export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatewayConnection {
 	constructor(public gameService: GameService) {}
 
@@ -23,6 +32,7 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	}
 
 	async handleConnection(client: any, ...args: any[]) {
+		console.log(client.id);
 		const user = await this.gameService.handleConnection(client, args);
 		this.users.push(user);
 	}
@@ -77,6 +87,7 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	@SubscribeMessage('update')
 	async updatelocation(client: Socket, data: any[]) {
 		const user = await this.gameService.getClientById(client);
+		console.log(user);
 		if (user) {
 			const room = await this.gameService.getRoomById(user.room.id);
 			this.gameService.getClientById(client).then((user) => {
@@ -100,6 +111,7 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			room.game.leftPlayer.name = "Eyüp";
 			this.games[client.id] = room.game;
 			client.join(key[0]);
+			this.server.to(room.id).emit('start', room.game);
 			return (room.game);
 		}
 	}
@@ -125,10 +137,11 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				this.games[client.id] = room.game;
 				this.server.to(room.id).emit('startGame');
 			} else {
-				client.emit('state', (room.game));
+				client.join(room.id);
 			}
 			this.server.to(room.id).emit('start');
 			user.room = room;
+			console.log(room.game);
 			return (room.game);
 		}
 	}

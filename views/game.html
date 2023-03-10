@@ -147,6 +147,7 @@
 			}
 			.chat-container {
 				display: flex;
+				position: relative;
 				flex-direction: row;
 				justify-content: space-between;
 				height: 500px;
@@ -157,7 +158,7 @@
 				width: 600px;
 				height: 500px;
 				position: absolute;
-				bottom: 483px;
+				top: 255px;
 				right: 63px;
 				border-right: #000;
 				border-left: #000;
@@ -279,13 +280,72 @@
 			  .send-button:hover {
 				background-color: #7b1fa2;
 			  }
-				  
-			
+			  .topnav {
+				overflow: hidden;
+				background-color: #333;
+			  }
+	  
+			  /* Style the links inside the navigation bar */
+			  .topnav a {
+				float: left;
+				display: block;
+				color: white;
+				text-align: center;
+				padding: 14px 16px;
+				text-decoration: none;
+			  }
+	  
+			  /* Change the color of links on hover */
+			  .topnav a:hover {
+				background-color: #ddd;
+				color: black;
+			  }
+	  
+			  /* Add a color to the active/current link */
+			  .topnav a.active {
+				background-color: #4CAF50;
+				color: white;
+			  }
+	  
+			  /* Style the profile section */
+			  .topnav .profile {
+				float: right;
+				display: flex;
+				align-items: center;
+				color: white;
+				text-align: center;
+				padding: 14px 16px;
+				text-decoration: none;
+			  }
+	  
+			  /* Style the profile name */
+			  .topnav .profile .name {
+				margin-right: 10px;
+			  }
+	  
+			  /* Style the profile photo */
+			  .topnav .profile img {
+				width: 25px;
+				height: 25px;
+				border-radius: 50%;
+				margin-right: 5px;
+			  }
 		</style>
 	</head>
 	<body>
 		<div id="canvas-container">
 			<canvas id="canvas" width="1200" height="600"></canvas>
+		</div>
+		<div class="topnav">
+			<!-- Add the profile section on the left -->
+			<a class="profile" href="#">
+				<span class="name">John Doe</span> <!-- Replace with the user's name -->
+				<img src="https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png" alt="Profile Photo">
+			</a>
+			<!-- Add the links to the other pages on the right -->
+			<a href="#" class="active">Home</a>
+			<a href="#">About</a>
+			<a href="#">Contact</a>
 		</div>
 		<div id="controls">
 			<input type="text" id="name" placeholder="Room name" />
@@ -361,32 +421,15 @@
 				ctx.lineTo(canvas.width / 2, canvas.height); 
 				ctx.stroke(); 
 			}
-			drawLine();
 			function drawBall() {
-				const gradient = ctx.createRadialGradient(
-					ball.x,
-					ball.y,
-					0,
-					ball.x,
-					ball.y,
-					ball.radius,
-				);
-				gradient.addColorStop(0, ball.color);
-				gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
-				gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.1)');
-				gradient.addColorStop(1, 'transparent');
 				ctx.save();
 				ctx.beginPath();
 				ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-				ctx.fillStyle = gradient;
-				ctx.shadowColor = game.shadowColor;
-				ctx.shadowBlur = ball.shadowBlur;
-				ctx.shadowOffsetX = 2;
-				ctx.shadowOffsetY = 2;
+				ctx.fillStyle = ball.color;
 				ctx.fill();
 				ctx.closePath();
 				ctx.restore();
-			}
+			  }			  
 
 			function drawPaddle(paddle) {
 				ctx.fillStyle = paddle.color;
@@ -414,7 +457,7 @@
 			});
 
 			function update() {
-				if (isPlaying) {
+				if (isPlaying && gameStarted) { 
 					socket.emit('update', [game]);
 				}
 			}
@@ -441,16 +484,12 @@
 				isPlaying = 1;
 			});
 
-			let gameStarted = false;
-
+			let gameStarted = false; // Flag to track whether game has started
 			socket.on('start', () => {
-			  if (!gameStarted) {
-				gameStarted = true;
+				gameStarted = true; // Set the flag to true when the game starts
 				setInterval(gameLoop, 1000 / game.fps);
-			  }
 			});
 			
-
 			socket.on('stop', () => {
 				isPlaying = 0;
 				setInterval(gameLoop, 0);
@@ -474,6 +513,7 @@
 					rightPlayer = game.rightPlayer;
 					leftPaddle = leftPlayer.paddle;
 					rightPaddle = rightPlayer.paddle;
+					drawLine();
 					render();
 				});
 				startGameBtn.disabled = true;
@@ -483,6 +523,7 @@
 			const join = document.getElementById('join-game-btn');
 			join.addEventListener('click', function () {
 				const name = document.getElementById('name').value;
+				location.href("www.google.com");
 				socket.emit('join', [name], (data) => {
 					game = data;
 					ball = game.ball;
@@ -490,6 +531,7 @@
 					rightPlayer = game.rightPlayer;
 					leftPaddle = leftPlayer.paddle;
 					rightPaddle = rightPlayer.paddle;
+					drawLine();
 					render();
 				});
 				startGameBtn.disabled = true;
