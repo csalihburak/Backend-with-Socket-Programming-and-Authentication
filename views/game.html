@@ -334,7 +334,7 @@
 	</head>
 	<body>
 		<div id="canvas-container">
-			<canvas id="canvas" width="1200" height="600"></canvas>
+			<canvas id="canvas" width="1300" height="700"></canvas>
 		</div>
 		<div class="topnav">
 			<!-- Add the profile section on the left -->
@@ -368,7 +368,7 @@
 				</tr>
 			</table>
 		</div>
-		<div class="chat-container">
+<!-- 		<div class="chat-container">
 		<div class="chat-card">
 			<div class="chat-header">
 				<h2>Chat Box</h2>
@@ -378,7 +378,7 @@
 				<input type="text" placeholder="Type your message..." id="user-message">
 				<input type="submit" value="Send" onclick="sendMessage()" class="send-button">
 				
-			</div>
+			</div> -->
 		<div id="countdown"></div>
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
@@ -407,12 +407,6 @@
 					chatbox.scrollTop = chatbox.scrollHeight;
 				}
 			}
-			const input = document.querySelector('.chat-footer input');
-			input.addEventListener('keydown', function(event) {
-				if (event.key === 'Enter') {
-				  sendMessage();
-				}
-			  });
 			function drawLine() {
 				ctx.beginPath();
 				ctx.setLineDash([5, 5]); 
@@ -523,7 +517,6 @@
 			const join = document.getElementById('join-game-btn');
 			join.addEventListener('click', function () {
 				const name = document.getElementById('name').value;
-				location.href("www.google.com");
 				socket.emit('join', [name], (data) => {
 					game = data;
 					ball = game.ball;

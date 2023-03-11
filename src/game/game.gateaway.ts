@@ -31,18 +31,19 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		console.log('Inıtialized.');
 	}
 
-	async handleConnection(client: any, ...args: any[]) {
+	async handleConnection(client: Socket, ...args: any[]) {
 		console.log(client.id);
 		const user = await this.gameService.handleConnection(client, args);
 		this.users.push(user);
 	}
 
-	async handleDisconnect(client: any) {
+	async handleDisconnect(client: Socket) {
 		const username = client.handshake.query.username;
 		const user = await this.gameService.getClientById(client);
 		for (let i = 0; i < user.rooms.length; i++) {
 			if (user.rooms[i].game.rightPlayer.id == client.id || user.rooms[i].game.leftPlayer.id == client.id) {
-				console.log(user.rooms[i].id);
+				client.leave(user.rooms[i].id);
+				console.log("roomName: '" + user.rooms[i].id + "'");
 				this.server.to(user.rooms[i].id).emit('stop');
 			}
 		}
@@ -74,11 +75,11 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			const room = await this.gameService.getRoomById(user.room.id);
 			const game = room.game;
 			if (game) {
-				if (client.id === game.leftPlayer.id) {
+ 				if (client.id === game.leftPlayer.id) {
 					prdown(game, key[0], 'left');
 				} else if (client.id === game.rightPlayer.id) {
 					prdown(game, key[0], 'right');
-				}
+				} 
 				update(room);
 			}
 		}
@@ -87,12 +88,12 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	@SubscribeMessage('update')
 	async updatelocation(client: Socket, data: any[]) {
 		const user = await this.gameService.getClientById(client);
-		console.log(user);
 		if (user) {
 			const room = await this.gameService.getRoomById(user.room.id);
 			this.gameService.getClientById(client).then((user) => {
-				if (room.game)
+				if (room.game) {
 					this.server.to(user.room.id).emit('update', {"ball": room.game.ball, "leftPlayer": room.game.leftPlayer, "rightPlayer": room.game.rightPlayer, "automated": true});	
+				}
 				});
 			update(room);
 		}
@@ -111,7 +112,6 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			room.game.leftPlayer.name = "Eyüp";
 			this.games[client.id] = room.game;
 			client.join(key[0]);
-			this.server.to(room.id).emit('start', room.game);
 			return (room.game);
 		}
 	}
@@ -126,7 +126,6 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async joinGame(client: Socket, data: any[]) {
 		const room = await this.gameService.getRoomById(data[0]);
 		const user = await this.gameService.getClientById(client);
-		console.log(room.users.length);
 		if (user && room) {
 			if (room.users.length != 2) {
 				user.rooms.push(room);
@@ -141,9 +140,14 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 			this.server.to(room.id).emit('start');
 			user.room = room;
-			console.log(room.game);
 			return (room.game);
 		}
+	}
+
+	@SubscribeMessage('set')
+	async set(client: Socket, data: any[]) {
+		this.server.emit('setInterval', data[0]);
+
 	}
 
 	@SubscribeMessage('create')
