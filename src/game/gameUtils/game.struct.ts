@@ -13,8 +13,8 @@ interface Player {
 @Injectable()
 export class Game {
 	canvas = {
-		width: 1300,
-		height: 600,
+		width: 600,
+		height: 400,
 	};
 
 	users: { [key: string]: string } = {};
@@ -24,9 +24,9 @@ export class Game {
 		name: '',
 		paddle: {
 			x: 0,
-			y: this.canvas.height / 2 - 80,
-			width: 10,
-			height: 160,
+			y: this.canvas.height / 2 - 50,
+			width: 8,
+			height: 100,
 			color: '#2C3E50',
 			speed: 10,
 		},
@@ -38,9 +38,9 @@ export class Game {
 		name: '',
 		paddle: {
 			x: this.canvas.width - 10,
-			y: this.canvas.height / 2 - 80,
-			width: 10,
-			height: 160,
+			y: this.canvas.height / 2 - 50,
+			width: 8,
+			height: 100,
 			color: '#2C3E50',
 			speed: 10,
 		},
@@ -52,7 +52,7 @@ export class Game {
 	ball = {
 		x: this.canvas.width / 2,
 		y: this.canvas.height / 2,
-		radius: 8,
+		radius: 4,
 		color: '#5588A3',
 		velocityX: 0.75,
 		velocityY: 0.75,

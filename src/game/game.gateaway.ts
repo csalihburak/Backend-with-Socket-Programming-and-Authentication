@@ -116,9 +116,13 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	@SubscribeMessage('state')
+	@SubscribeMessage('sendMessage')
 	async state(client: Socket, data: any[]) {
-		client.emit('state', data[0]);
+		const user = await this.gameService.getClientById(client);
+		if (user) {
+			await client.emit('getMessage', data[0]);
+			console.log('test');
+		}
 	}
 
 
@@ -137,16 +141,16 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				this.server.to(room.id).emit('startGame');
 			} else {
 				client.join(room.id);
+				client.emit('start');
 			}
-			this.server.to(room.id).emit('start');
 			user.room = room;
 			return (room.game);
 		}
 	}
 
-	@SubscribeMessage('set')
+	@SubscribeMessage('newUser')
 	async set(client: Socket, data: any[]) {
-		this.server.emit('setInterval', data[0]);
+		this.server.emit('newUser', "https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png");
 
 	}
 
