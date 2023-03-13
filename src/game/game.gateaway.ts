@@ -31,9 +31,20 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		console.log('Inıtialized.');
 	}
 
-	async handleConnection(client: Socket, ...args: any[]) {
-		console.log(client.id);
-		const user = await this.gameService.handleConnection(client, args);
+	async handleConnection(client: Socket) {
+		let query = client.handshake.query;
+		const user = await this.gameService.handleConnection(client, query);
+		const room = await this.gameService.getRoomById(query.room);
+		client.join('test');
+		if (room) {
+			if (room.users.length < 2) {
+				room.game.leftPlayer.id = client.id;
+				room.game.leftPlayer.name = user.username;
+			}
+		} else {
+			client.join(query.room);
+		}
+		console.log(`Client connected: ${query.user}`);
 		this.users.push(user);
 	}
 
@@ -92,7 +103,7 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			const room = await this.gameService.getRoomById(user.room.id);
 			this.gameService.getClientById(client).then((user) => {
 				if (room.game) {
-					this.server.to(user.room.id).emit('update', {"ball": room.game.ball, "leftPlayer": room.game.leftPlayer, "rightPlayer": room.game.rightPlayer, "automated": true});	
+					this.server.to(user.room.id).emit('update', {"ball": room.game.ball, "leftPlayer": room.game.leftPlayer, "rightPlayer": room.game.rightPlayer });	
 				}
 				});
 			update(room);
@@ -120,8 +131,7 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async state(client: Socket, data: any[]) {
 		const user = await this.gameService.getClientById(client);
 		if (user) {
-			await client.emit('getMessage', data[0]);
-			console.log('test');
+			await this.server.to('test').emit('getMessage', [user.username, data[1]]);
 		}
 	}
 
@@ -151,12 +161,11 @@ export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	@SubscribeMessage('newUser')
 	async set(client: Socket, data: any[]) {
 		this.server.emit('newUser', "https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png");
-
 	}
 
-	@SubscribeMessage('create')
+	@SubscribeMessage('gameStop')
 	async createGame(client: Socket, data: any[]) {
-		const room = await this.gameService.createGame(client, data);
-		this.server.emit('userList', room.id);
+		const user = await this.gameService.getClientById(client);
+		this.server.to(user.room.id).emit('stop');
 	}
 }

@@ -37,9 +37,8 @@ export class GameService {
     rooms: Room[] = [];
 
 
-    async handleConnection(client: Socket, ...args: any[]) : Promise<User>{
-		const user = new User(client.id, args[0], client);
-		console.log(`Client connected: ${args[0]}`);
+    async handleConnection(client: Socket, args: any) : Promise<User> {
+        const user = new User(client.id, args.user, client);
         this.users.push(user);
         return user;
     }
@@ -51,7 +50,7 @@ export class GameService {
         }
     }
 
-    async getRoomById(id: string) {
+    async getRoomById(id: any) {
         for(let i = 0; i < this.rooms.length; i++) {
             if (this.rooms[i].id == id)
                 return this.rooms[i];
@@ -69,7 +68,7 @@ export class GameService {
         user.rooms.push(room);
     }
 
-    async addRoom(name: string) : Promise<Room>{
+    async addRoom(name: any) : Promise<Room>{
         const game = new Game();
         const room = new Room();
         room.id = name;

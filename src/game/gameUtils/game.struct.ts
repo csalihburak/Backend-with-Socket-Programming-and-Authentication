@@ -13,8 +13,8 @@ interface Player {
 @Injectable()
 export class Game {
 	canvas = {
-		width: 600,
-		height: 400,
+		width: 602,
+		height: 300,
 	};
 
 	users: { [key: string]: string } = {};
@@ -83,16 +83,19 @@ export function update(room: Room) {
 	game.ball.y += game.ball.velocityY;
 
 	
-	if (game.ball.x > (game.canvas.width - game.ball.radius)) {
+	if (game.ball.x + 7> (game.canvas.width - game.ball.radius)) {
 		if (game.ball.y < game.rightPlayer.paddle.y || game.ball.y > game.rightPlayer.paddle.y + game.rightPlayer.paddle.height) {
 			game.leftPlayer.score++;
 		}
 		game.ball.velocityX *= -1;
-	} else if (0 > (game.ball.x - game.ball.radius)) {
+		game.ball.velocityY *= +1;
+
+	} else if (13 > (game.ball.x + game.ball.radius)) {
 		if (game.ball.y < game.leftPlayer.paddle.y || game.ball.y > game.leftPlayer.paddle.y + game.leftPlayer.paddle.height) {
 			game.rightPlayer.score++;
 		}
 		game.ball.velocityX *= -1;
+		game.ball.velocityY *= +1;
 	} else if ( ((game.ball.y + game.ball.radius) >= game.leftPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.leftPlayer.paddle.y + game.leftPlayer.paddle.height)) && ((game.ball.x - game.ball.radius - 2) <= game.leftPlayer.paddle.width)) {
 		
 		game.ball.velocityY = +game.ball.velocityY;
