@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
 import { Socket } from 'socket.io';
 import { Room } from '../game.service';
 
@@ -78,48 +77,51 @@ function resetGame(game: Game) {
 
 export function update(room: Room) {
 
-	let game = room.game;
-	game.ball.x += game.ball.velocityX;
-	game.ball.y += game.ball.velocityY;
+	if (room) {
 
-	
-	if (game.ball.x + 7> (game.canvas.width - game.ball.radius)) {
-		if (game.ball.y < game.rightPlayer.paddle.y || game.ball.y > game.rightPlayer.paddle.y + game.rightPlayer.paddle.height) {
-			game.leftPlayer.score++;
-		}
-		game.ball.velocityX *= -1;
-		game.ball.velocityY *= +1;
-
-	} else if (13 > (game.ball.x + game.ball.radius)) {
-		if (game.ball.y < game.leftPlayer.paddle.y || game.ball.y > game.leftPlayer.paddle.y + game.leftPlayer.paddle.height) {
-			game.rightPlayer.score++;
-		}
-		game.ball.velocityX *= -1;
-		game.ball.velocityY *= +1;
-	} else if ( ((game.ball.y + game.ball.radius) >= game.leftPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.leftPlayer.paddle.y + game.leftPlayer.paddle.height)) && ((game.ball.x - game.ball.radius - 2) <= game.leftPlayer.paddle.width)) {
+		let game = room.game;
+		game.ball.x += game.ball.velocityX;
+		game.ball.y += game.ball.velocityY;
 		
-		game.ball.velocityY = +game.ball.velocityY;
-	} else if ( ((game.ball.y + game.ball.radius ) >= game.rightPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.rightPlayer.paddle.y + game.rightPlayer.paddle.height)) && ((game.ball.x + game.ball.radius) >= (game.canvas.width - game.rightPlayer.paddle.width)))  { 
 		
-		game.ball.velocityX = +game.ball.velocityX;
-	} else if ( ((game.ball.y + game.ball.radius) > game.canvas.height) || ((game.ball.y - game.ball.radius) < 0)) {
-
+		if (game.ball.x + 7> (game.canvas.width - game.ball.radius)) {
+			if (game.ball.y < game.rightPlayer.paddle.y || game.ball.y > game.rightPlayer.paddle.y + game.rightPlayer.paddle.height) {
+				game.leftPlayer.score++;
+			}
+			game.ball.velocityX *= -1;
+			game.ball.velocityY *= +1;
+			
+		} else if (13 > (game.ball.x + game.ball.radius)) {
+			if (game.ball.y < game.leftPlayer.paddle.y || game.ball.y > game.leftPlayer.paddle.y + game.leftPlayer.paddle.height) {
+				game.rightPlayer.score++;
+			}
+			game.ball.velocityX *= -1;
+			game.ball.velocityY *= +1;
+		} else if ( ((game.ball.y + game.ball.radius) >= game.leftPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.leftPlayer.paddle.y + game.leftPlayer.paddle.height)) && ((game.ball.x - game.ball.radius - 2) <= game.leftPlayer.paddle.width)) {
+			
+			game.ball.velocityY = +game.ball.velocityY;
+		} else if ( ((game.ball.y + game.ball.radius ) >= game.rightPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.rightPlayer.paddle.y + game.rightPlayer.paddle.height)) && ((game.ball.x + game.ball.radius) >= (game.canvas.width - game.rightPlayer.paddle.width)))  { 
+			
+			game.ball.velocityX = +game.ball.velocityX;
+		} else if ( ((game.ball.y + game.ball.radius) > game.canvas.height) || ((game.ball.y - game.ball.radius) < 0)) {
+			
 		game.ball.velocityY = -game.ball.velocityY;
-	} else if ( ((game.ball.x - game.ball.radius) < 0) || ((game.ball.x + game.ball.radius) > game.canvas.width) ) {
+		} else if ( ((game.ball.x - game.ball.radius) < 0) || ((game.ball.x + game.ball.radius) > game.canvas.width) ) {
 
-		game.ball.velocityX = +game.ball.velocityX;
-	}
-	
-	
-	if (game.upPressed && game.leftPlayer.paddle.y > 0) {
-		game.leftPlayer.paddle.y -= 1.5;
-	} else if (game.downPressed && game.leftPlayer.paddle.y < game.canvas.height - game.leftPlayer.paddle.height) {
+			game.ball.velocityX = +game.ball.velocityX;
+		}
+
+
+		if (game.upPressed && game.leftPlayer.paddle.y > 0) {
+			game.leftPlayer.paddle.y -= 1.5;
+		} else if (game.downPressed && game.leftPlayer.paddle.y < game.canvas.height - game.leftPlayer.paddle.height) {
 			game.leftPlayer.paddle.y += 1.5;
-	}
-	if (game.upPressed2 && game.rightPlayer.paddle.y > 0) {
-		game.rightPlayer.paddle.y -= 1.5;
-	} else if ( game.downPressed2 && game.rightPlayer.paddle.y < game.canvas.height - game.rightPlayer.paddle.height) {
-		game.rightPlayer.paddle.y += 1.5;
+		}
+		if (game.upPressed2 && game.rightPlayer.paddle.y > 0) {
+			game.rightPlayer.paddle.y -= 1.5;
+		} else if ( game.downPressed2 && game.rightPlayer.paddle.y < game.canvas.height - game.rightPlayer.paddle.height) {
+			game.rightPlayer.paddle.y += 1.5;
+		}
 	}
 }
 

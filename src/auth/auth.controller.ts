@@ -4,7 +4,6 @@ import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import * as fs from 'fs';
 
 @Controller('auth')
 export class AuthController {
@@ -74,5 +73,33 @@ export class AuthController {
 	@Post('loginValidate')
 	async validate(@Req() req) {
 		return this.authService.validateCode(req);
+	}
+
+	
+
+	@Post('uploads')
+	@UseInterceptors(
+		FileInterceptor('file', {
+			storage: diskStorage({
+				destination: './public/images/',
+				filename: (req, file, callback) => {
+					const uniqsuffix = Date.now();
+					const ext = extname(file.originalname);
+					const filename = `${file.originalname}-${uniqsuffix}${ext}`;
+					callback(null, filename);
+				},
+			}),
+		}),
+	)
+	async uploadFile(@UploadedFile() file: Express.Multer.File,@Req() req, @Res() res: Response){
+		const url = file.path;
+		console.log(url);
+		res.send({
+			body: {
+				url: url,
+			}
+		});
+		res.end();
+
 	}
 }

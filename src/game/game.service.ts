@@ -33,7 +33,6 @@ export class Room {
 @Injectable()
 export class GameService {
     users: User[] = [];
-
     rooms: Room[] = [];
 
 
@@ -75,6 +74,11 @@ export class GameService {
         room.game = game;
         this.rooms.push(room);
         return room;
+    }
+
+    async deleteRoom(rooomId: any) {
+        const id = this.rooms.indexOf(rooomId);
+        this.rooms.splice(id, 1);
     }
 
 
