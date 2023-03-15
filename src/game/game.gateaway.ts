@@ -1,190 +1,145 @@
-import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, SubscribeMessage, WebSocketGateway, WebSocketServer} from '@nestjs/websockets';
+import { SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/websockets';
+import { Game, User } from '@prisma/client';
 import { Server, Socket } from 'socket.io';
-import { GameService, User, Room } from './game.service';
-import { Game, update, prup, prdown } from './gameUtils/game.struct';
-import { Controller, Get, Header } from '@nestjs/common';
-
-
-
+import { GameService } from './game.service';
+import { gameStruct, update, prup, prdown } from './gameUtils/game.struct';
 
 @WebSocketGateway({
-	namespace: '/game',
+	namespace: '/api/game',
 	cors: {
-	  origin: 'http://142.93.164.123:3001',
-	  methods: ['GET', 'POST'],
-	  allowedHeaders: ['Content-Type', 'Authorization'],
-	  credentials: true,
+		origin: 'http://142.93.164.123:3001',
+		methods: ['GET', 'POST'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+		credentials: true,
 	},
-  })
-export class GameGateaway implements OnGatewayInit, OnGatewayDisconnect, OnGatewayConnection {
+})
+export class GameGateaway {
 	constructor(public gameService: GameService) {}
-
 	@WebSocketServer() server: Server;
-	users: User[] = [];
-	usernames = [];
-	game = new Game();
-
-	games: { [key: string]: Game } = {};
-	connectedUsers: Record<string, Socket> = {};
+	games: Record<string, gameStruct> = {};
+	users: Record<string, User> = {};
 
 	afterInit(server: Server) {
-		console.log('Inıtialized.');
+		console.log('Initialized Game Socket');
 	}
 
 	async handleConnection(client: Socket) {
-		let query = client.handshake.query;
-		const user = await this.gameService.handleConnection(client, query);
-		let  room = await this.gameService.getRoomById(query.room);
-		client.join('test');
-		if (room) {
-			console.log(room.users.length)
-			if (room.users.length < 2) {
-				user.rooms.push(room);
-				room.users.push(user);
-				user.room = room;
-				room.game.rightPlayer.id = client.id;
-				room.game.rightPlayer.name = user.username;
-				client.join(room.id);
-				this.server.to(room.id).emit('initalize', room.game);
-				this.server.to(room.id).emit('startGame');
+		const query = client.handshake.query;
+		let sessionToken: any = query.sessionToken;
+		let gameHash: any = query.gameHash;
+		this.gameService.getGame(gameHash).then((game) => {
+			if (game) {
+				this.gameService.getUser(sessionToken).then((user) => {
+					if (user) {
+						this.users[client.id] = user;
+						if (user.id == game.leftPlayerId) {
+							client.join(gameHash);
+							this.gameService.createGameWoptions(game, user.id)
+								.then((newGame) => {
+									this.games[gameHash] = newGame;
+									client.emit('initalize', newGame);
+									client.emit('newUser', user.pictureUrl);
+								});
+						} else if (user.id == game.rightPlayerId) {
+							let play = this.games[gameHash];
+							if (play) {
+								play.rightPlayerId = user.id;
+								this.server.to(gameHash).emit('initalize', play);
+								this.server.to(gameHash).emit('newUser', user.pictureUrl);
+								this.server.to(gameHash).emit('startGame');
+							} else {
+								console.log('Game not found'); // we can redirect the user to lobby
+								return null;
+							}
+						} else {
+							client.join(gameHash);
+							client.emit('start');
+							this.server.to(gameHash).emit('newUser', user.pictureUrl);
+						}
+					} else {
+						console.log('User not found');
+					}
+				});
+			} else {
+				console.log('Game not found');
 			}
-		} else {
-			room = await this.gameService.addRoom(query.room);
-			if (room) {
-				user.rooms.push(room);
-				user.room = room;
-				room.users.push(user);
-				room.game.leftPlayer.id = client.id;
-				room.game.leftPlayer.name = user.username;
-				client.join(room.id);
-				client.emit('initalize', room.game);
-			}
-		}
-		console.log(`Client connected: ${query.user}`);
-		this.users.push(user);
+		});
 	}
 
 	async handleDisconnect(client: Socket) {
-		const username = client.handshake.query.username;
-		const user = await this.gameService.getClientById(client);
-		for (let i = 0; i < user.rooms.length; i++) {
-			if (user.rooms[i].game.rightPlayer.id == client.id || user.rooms[i].game.leftPlayer.id == client.id) {
-				client.leave(user.rooms[i].id);
-				console.log("roomName: '" + user.rooms[i].id + "'");
-				this.gameService.deleteRoom(user.rooms[i].id);
-				this.server.to(user.rooms[i].id).emit('stop');
-			}
-		}
-		console.log(`Client disconnected: ${username}`);
+		
 	}
-
 
 	@SubscribeMessage('prUp')
 	async prup(client: Socket, key: any[]) {
-		const user = await this.gameService.getClientById(client);
-		if (user.room) {
-			const room = await this.gameService.getRoomById(user.room.id);
-		   const game = room.game;
-		   if (game) {
-			   if (client.id === game.leftPlayer.id) {
-				   prup(game, key[0], 'left');
-			   } else if (client.id === game.rightPlayer.id) {
-				   prup(game, key[0], 'right');
-			   }
-			   update(room);
-		   }
+		let user = this.users[client.id];
+		if (user) {
+			const game = this.games[key[0]];
+			if (game) {
+				if (client.id === game.leftPlayer.id) {
+					prup(game, key[0], 'left');
+				} else if (client.id === game.rightPlayer.id) {
+					prup(game, key[0], 'right');
+				}
+				update(game);
+			}
 		}
 	}
-	
+
 	@SubscribeMessage('prDown')
 	async prdown(client: Socket, key: any[]) {
-		const user = await this.gameService.getClientById(client);
-		if (user.room) {
-			const room = await this.gameService.getRoomById(user.room.id);
-			const game = room.game;
+		let user = this.users[client.id];
+		if (user) {
+			const game = this.games[key[0]];
 			if (game) {
- 				if (client.id === game.leftPlayer.id) {
+				if (client.id === game.leftPlayer.id) {
 					prdown(game, key[0], 'left');
 				} else if (client.id === game.rightPlayer.id) {
 					prdown(game, key[0], 'right');
-				} 
-				update(room);
+				}
+				update(game);
 			}
 		}
 	}
 
 	@SubscribeMessage('update')
 	async updatelocation(client: Socket, data: any[]) {
-		const user = await this.gameService.getClientById(client);
+		let user = this.users[client.id];
 		if (user) {
-			const room = await this.gameService.getRoomById(user.room.id);
-			this.gameService.getClientById(client).then((user) => {
-				if (room.game) {
-					this.server.to(user.room.id).emit('update', {"ball": room.game.ball, "leftPlayer": room.game.leftPlayer, "rightPlayer": room.game.rightPlayer });	
-				}
+			let game = this.games[data[0]];
+			if (game) {
+				this.server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer,
 				});
-			update(room);
-		}
-	};
-
-	@SubscribeMessage('start') // yönlerin isimlendirmeleri yanlış düzelt
-	async connect(client: Socket, key: any[]) {
-		const user = await this.gameService.getClientById(client);
-		const room = await this.gameService.addRoom(key[0]);
-		if (user && room) {
-			user.rooms.push(room);
-			room.users.push(user);
-			user.room = room;
-			room.game.leftPlayer.id = client.id;
-			this.game.users[client.id] = user.username;
-			room.game.leftPlayer.name = "Eyüp";
-			this.games[client.id] = room.game;
-			client.join(key[0]);
-			return (room.game);
+				update(game);
+			} else {
+				console.log("Game not found"); // and again redirect the user to 
+			}
+		} else {
+			console.log("User not found"); // and again redirect the user to 
 		}
 	}
 
 	@SubscribeMessage('sendMessage')
 	async state(client: Socket, data: any[]) {
-		const user = await this.gameService.getClientById(client);
+		let user = this.users[client.id];
 		if (user) {
-			await this.server.to('test').emit('getMessage', [user.username, data[1], data[2]]);
-		}
-	}
-
-
-	@SubscribeMessage('join')
-	async joinGame(client: Socket, data: any[]) {
-		const room = await this.gameService.getRoomById(data[0]);
-		const user = await this.gameService.getClientById(client);
-		if (user && room) {
-			if (room.users.length != 2) {
-				user.rooms.push(room);
-				room.users.push(user);
-				room.game.rightPlayer.id = client.id;
-				room.game.rightPlayer.name = "Burak";
-				client.join(room.id);
-				this.games[client.id] = room.game;
-				this.server.to(room.id).emit('startGame', room.game);
-			} else {
-				client.join(room.id);
-				client.emit('start');
-			}
-			user.room = room;
-			return (room.game);
+			this.server.to(data).emit('getMessage', [user.username, data[1], data[2]]);
+		} else {
+			console.log("User not found"); // and again redirect the user to 
 		}
 	}
 
 	@SubscribeMessage('newUser')
 	async set(client: Socket, data: any[]) {
-		this.server.emit('newUser', "https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png");
+		this.server.emit(
+			'newUser',
+			'https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png',
+		);
 	}
-
-	
 
 	@SubscribeMessage('gameStop')
 	async createGame(client: Socket, data: any[]) {
-		const user = await this.gameService.getClientById(client);
-		this.server.to(user.room.id).emit('stop');
+/* 		const user = await this.gameService.getClientById(client);
+		this.server.to(user.room.id).emit('stop'); */
 	}
 }

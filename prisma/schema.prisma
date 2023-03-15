@@ -40,10 +40,25 @@ model SessionToken {
   id        Int      @id @default(autoincrement())
   userId    Int
   loginIp   String
-  token     String
+  token     String   @unique
   loginTime DateTime @default(now())
 
   @@map("sessionTokens")
+}
+
+model Game {
+  id            Int     @id @default(autoincrement())
+  leftPlayerId  Int
+  rightPlayerId Int
+  map           Int
+  round         Int
+  gameId        String
+  private       Boolean
+  hash          String  @unique
+  status        Int
+  userCount     Int
+
+  @@map("Games")
 }
 
 model Validate {
@@ -52,7 +67,6 @@ model Validate {
   validcode    Int
   email        String
   expired_date DateTime @default(now())
-
 
   @@map("validations")
 }

@@ -16,13 +16,8 @@ export class AuthController {
 			const response = await this.authService.intraGet(query.code, req);
 			const parse = JSON.parse(response);
 			if (parse.status == 200) {
-				res.cookie('sessionToken', "1", {httpOnly: true, path: "http://142.93.104.99:3000/welcome"});
-				res.setHeader('Set-Cookie', [`sessionToken=${parse.token}; Path=http://142.93.104.99:3000/welcome; HttpOnly`]);
 				res.redirect(`http://142.93.104.99:3000/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
 			} else {
-				console.log(parse);
-				res.cookie('sessionToken', "1", {httpOnly: true, path: "/"});
-				res.setHeader('Set-Cookie', [`sessionToken=${parse.token}; Path=/; HttpOnly`]);
 				res.redirect(`http://142.93.104.99:3000/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
 			}
 			res.end();

@@ -1,98 +1,125 @@
-import { Game } from './gameUtils/game.struct'
-import { PrismaClient} from '@prisma/client';
+import { gameStruct } from './gameUtils/game.struct'
+import { User, Game, Stat} from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io'
 import * as crypto from 'crypto'
 
 
-
-export class User {
-	id: string;
-	username: string;
-	socket: Socket;
-    rooms: Room[];
-    room: Room;
-	constructor(id: string, username: string, socket: Socket) {
-        this.id = id;
-		this.username = username;
-        this.rooms = [];
-		this.socket = socket;
-	}
-}
-
-export class Room {
-	id: string;
-	users: User[] = [];
-	loby: User[] = [];
-	game: Game;
-	status: number;  // 1 is avaliable 0 is empty 2 is full for play
-    priv: boolean;
-}
-
-
 @Injectable()
 export class GameService {
-    users: User[] = [];
-    rooms: Room[] = [];
 
+    constructor(public prisma: PrismaService, ) {}
 
-    async handleConnection(client: Socket, args: any) : Promise<User> {
-        const user = new User(client.id, args.user, client);
-        this.users.push(user);
-        return user;
+    async getUser(sessionToken: string) : Promise<User>{
+        if (sessionToken) {
+			this.prisma.sessionToken.findFirst({
+				where: {
+					token: sessionToken,
+				}
+			}).then(session => {
+				if (session) {
+					const userId = session.userId;
+					this.prisma.user.findUnique({
+						where: {
+							id: userId,
+						}
+					}).then(user => {
+						if (user) {
+							return user;
+						}
+					})
+				} else {
+					console.log("Session not found"); // burada kullanıcıya bir hata döndürüp üç saniye içinde giriş sayfasına yönlendirelim
+                    return null
+				}
+			});
+		}
+        return null;
     }
 
-    async getClientById(client: Socket) : Promise<User> {
-        for(let i = 0; i < this.users.length; i++) {
-            if (this.users[i].id == client.id)
-                return this.users[i];
+
+    async createGameWoptions(game: Game, userId: number) : Promise<gameStruct> {
+        const newGame = new gameStruct();
+        newGame.map = game.map;
+        newGame.round = game.round;
+        newGame.leftPlayerId = userId;
+        return newGame;
+    }
+
+
+    async createGame(user: User, data: any[]) : Promise<Game> {
+		let hash = crypto.randomBytes(16).toString();
+        this.prisma.game.create({
+            data: {
+                gameId: data[0],
+                leftPlayerId: user.id,
+                rightPlayerId: 0,
+                round: data[1],
+                map: data[2],
+                private: data[3],
+                hash,
+                status: 1,
+                userCount: 0,
+            }
+        }).then(game => {
+            if (game) {
+                this.prisma.user.update({
+                    where: { id: user.id, },
+                    data: { stat: Stat.IN_GAME }
+                }).then(() => {
+                    return game.hash;
+                });
+            } else {
+                console.log("Error in game creation.");
+            }
+        }).catch(error => {
+            throw error;
+        })
+        return null;
+    }
+
+
+    async updateGame(user: User, game: Game) : Promise<Game> {
+        if (game.userCount == 1) {
+            this.prisma.game.update({
+                where: { id: game.id },
+                data: {
+                    rightPlayerId: user.id,
+                    userCount: 2,
+                    status: 2,
+                },
+            }).then((game) => {
+                
+                return 
+            }).catch(error => {
+                console.log("Error while joining for play");
+                return null;
+            });
+        } else {
+            this.prisma.game.update({
+                where: { id: game.id },
+                data: { userCount: game.userCount + 1 }
+            }).then(game => {
+                return JSON.stringify({statu: 200, gameHash: game.hash});
+            }).catch(error => {
+                console.log("Error while joining for watch");
+                return null;
+            });
+            return null;
         }
     }
 
-    async getRoomById(id: any) {
-        for(let i = 0; i < this.rooms.length; i++) {
-            if (this.rooms[i].id == id)
-                return this.rooms[i];
-        }
-    }
-
-    async join(client: Socket, data: any[]) {
-        const room = await this.getRoomById(data[0]);
-        const user = await this.getClientById(client);
-        client.join(data[0]);
-        room.users.push(user);
-        room.status = 1;
-        client.join(room.id);
-        this.rooms.push(room);
-        user.rooms.push(room);
-    }
-
-    async addRoom(name: any) : Promise<Room>{
-        const game = new Game();
-        const room = new Room();
-        room.id = name;
-        room.game = game;
-        this.rooms.push(room);
-        return room;
-    }
-
-    async deleteRoom(rooomId: any) {
-        const id = this.rooms.indexOf(rooomId);
-        this.rooms.splice(id, 1);
-    }
-
-
-    async createGame(client: Socket, data: any[]) : Promise<Room> {
-        const game = new Game();
-		const room = new Room();
-		room.game = game;
-		room.id = data[0];
-		const user = await this.getClientById(client);
-		room.users.push(user);
-		room.status = 1;
-        client.join("burak");
-        this.rooms.push(room);
-        user.rooms.push(room);
-        return room;
+    async getGame(hash: string) : Promise<Game> {
+        this.prisma.game.findUnique({
+            where: { hash: hash },
+        }).then(game => {
+            return game;
+        }).catch(error => {
+            console.log("Error while getting game");
+            console.log(error);
+            return null;
+        });
+        return null;
     }
 }

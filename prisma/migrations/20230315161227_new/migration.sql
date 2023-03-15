@@ -33,6 +33,20 @@ CREATE TABLE "sessionTokens" (
 );
 
 -- CreateTable
+CREATE TABLE "Games" (
+    "id" SERIAL NOT NULL,
+    "leftPlayerId" INTEGER NOT NULL,
+    "rightPlayerId" INTEGER NOT NULL,
+    "map" INTEGER NOT NULL,
+    "round" INTEGER NOT NULL,
+    "gameId" TEXT NOT NULL,
+    "private" BOOLEAN NOT NULL,
+    "hash" TEXT NOT NULL,
+
+    CONSTRAINT "Games_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "validations" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
@@ -48,3 +62,9 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sessionTokens_token_key" ON "sessionTokens"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Games_hash_key" ON "Games"("hash");

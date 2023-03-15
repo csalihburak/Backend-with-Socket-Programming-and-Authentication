@@ -1,22 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { Socket } from 'socket.io';
-import { Room } from '../game.service';
 
-interface Player {
-	id: string;
-	name: string;
-	paddle;
-	score: number;
-}
 
 @Injectable()
-export class Game {
-	canvas = {
-		width: 602,
-		height: 300,
-	};
+export class gameStruct {
+	canvas = { width: 602, height: 300 };
 
-	users: { [key: string]: string } = {};
+	map: number;
+
+	leftPlayerId: number;
+	rightPlayerId: number;
+	round: number;
 
 	leftPlayer = {
 		id: '',
@@ -45,8 +38,6 @@ export class Game {
 		},
 		score: 0,
 	};
-	client: Socket;
-	fps: number = 60;
 
 	ball = {
 		x: this.canvas.width / 2,
@@ -59,13 +50,11 @@ export class Game {
 
 	upPressed = false;
 	downPressed = false;
-	wPressed = false;
-	sPressed = false;
 	upPressed2 = false;
 	downPressed2 = false;
 }
 
-function resetGame(game: Game) {
+function resetGame(game: gameStruct) {
 	game.ball.x = game.canvas.width / 2;
 	game.ball.y =  game.canvas.height / 2;
 	game.rightPlayer.paddle.x = game.canvas.width - 10,
@@ -75,23 +64,21 @@ function resetGame(game: Game) {
 }
 
 
-export function update(room: Room) {
+export function update(game: gameStruct) {
 
-	if (room) {
-
-		let game = room.game;
+	if (game) {
 		game.ball.x += game.ball.velocityX;
 		game.ball.y += game.ball.velocityY;
 		
 		
-		if (game.ball.x + 7> (game.canvas.width - game.ball.radius)) {
+		if (game.ball.x + 3 > (game.canvas.width - game.ball.radius)) {
 			if (game.ball.y < game.rightPlayer.paddle.y || game.ball.y > game.rightPlayer.paddle.y + game.rightPlayer.paddle.height) {
 				game.leftPlayer.score++;
 			}
 			game.ball.velocityX *= -1;
 			game.ball.velocityY *= +1;
 			
-		} else if (13 > (game.ball.x + game.ball.radius)) {
+		} else if (7 > (game.ball.x + game.ball.radius)) {
 			if (game.ball.y < game.leftPlayer.paddle.y || game.ball.y > game.leftPlayer.paddle.y + game.leftPlayer.paddle.height) {
 				game.rightPlayer.score++;
 			}
@@ -107,11 +94,11 @@ export function update(room: Room) {
 			
 		game.ball.velocityY = -game.ball.velocityY;
 		} else if ( ((game.ball.x - game.ball.radius) < 0) || ((game.ball.x + game.ball.radius) > game.canvas.width) ) {
-
+		
 			game.ball.velocityX = +game.ball.velocityX;
 		}
-
-
+		
+		
 		if (game.upPressed && game.leftPlayer.paddle.y > 0) {
 			game.leftPlayer.paddle.y -= 1.5;
 		} else if (game.downPressed && game.leftPlayer.paddle.y < game.canvas.height - game.leftPlayer.paddle.height) {
@@ -125,45 +112,7 @@ export function update(room: Room) {
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export function prup(game: Game, key: any, playerSide: string) {
+export function prup(game: gameStruct, key: any, playerSide: string) {
 	if (playerSide === 'left') {
 		if (key === 'w') {
 			game.upPressed = false;
@@ -179,7 +128,7 @@ export function prup(game: Game, key: any, playerSide: string) {
 	}
 }
 
-export function prdown(game: Game, key: any, playerSide: string) {
+export function prdown(game: gameStruct, key: any, playerSide: string) {
 	if (playerSide === 'left') {
 		if (key === 'w') {
 			game.upPressed = true;
