@@ -6,7 +6,7 @@ import { User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 @WebSocketGateway({
-	namespace: '/api/gameUtils',
+	namespace: '/socket/gameUtils',
 	cors: {
 		origin: 'http://142.93.164.123:3001',
 		methods: ['GET', 'POST'],

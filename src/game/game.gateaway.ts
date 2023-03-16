@@ -5,7 +5,7 @@ import { GameService } from './game.service';
 import { gameStruct, update, prup, prdown } from './gameUtils/game.struct';
 
 @WebSocketGateway({
-	namespace: '/api/game',
+	namespace: '/socket/game',
 	cors: {
 		origin: 'http://142.93.164.123:3001',
 		methods: ['GET', 'POST'],
@@ -48,7 +48,8 @@ export class GameGateaway {
 								this.server.to(gameHash).emit('newUser', user.pictureUrl);
 								this.server.to(gameHash).emit('startGame');
 							} else {
-								console.log('Game not found'); // we can redirect the user to lobby
+								console.log('Game not found');
+								client.emit('playerLeft', ["Game not found"]);
 								return null;
 							}
 						} else {
@@ -57,17 +58,31 @@ export class GameGateaway {
 							this.server.to(gameHash).emit('newUser', user.pictureUrl);
 						}
 					} else {
-						console.log('User not found');
+						client.emit('playerLeft', ["User not found"]);
+
 					}
 				});
 			} else {
 				console.log('Game not found');
+				client.emit('playerLeft', ["Game not found"]);
 			}
-		});
+		}).catch(error => {
+			console.log(error);
+		})
 	}
 
 	async handleDisconnect(client: Socket) {
-		
+		const user = this.users[client.id];
+		for (const key in this.games) { 
+			if (this.games.hasOwnProperty(key)) {
+				const game = this.games[key];
+				if (user.id == game.leftPlayerId || user.id == game.rightPlayerId) {
+					this.server.to(key).emit('playerLeft');
+				} else {
+					this.server.to(key).emit('userLeft', [user.pictureUrl]);
+				}
+			}
+		  }
 	}
 
 	@SubscribeMessage('prUp')
@@ -99,6 +114,8 @@ export class GameGateaway {
 				}
 				update(game);
 			}
+		} else {
+			client.emit('playerLeft', ["User not found"]);
 		}
 	}
 
@@ -111,11 +128,22 @@ export class GameGateaway {
 				this.server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer,
 				});
 				update(game);
+				if (game.leftPlayer.score >= game.round) {
+					this.server.to(data[0]).emit('endOfGame', game.leftPlayer.name);
+					this.gameService.updateUser(game.leftPlayerId, true);
+					this.gameService.updateUser(game.rightPlayerId, false);
+				} else if (game.rightPlayer.score >= game.round) {
+					this.server.to(data[0]).emit('endOfGame', game.rightPlayer.name);
+					this.gameService.updateUser(game.rightPlayerId, true);
+					this.gameService.updateUser(game.leftPlayerId, false);
+				}
 			} else {
-				console.log("Game not found"); // and again redirect the user to 
+				client.emit('playerLeft', ["Game not found"]);
+				console.log("Game not found");
 			}
 		} else {
-			console.log("User not found"); // and again redirect the user to 
+			client.emit('playerLeft', ["User not found"]);
+			console.log("User not found");
 		}
 	}
 
@@ -125,21 +153,9 @@ export class GameGateaway {
 		if (user) {
 			this.server.to(data).emit('getMessage', [user.username, data[1], data[2]]);
 		} else {
-			console.log("User not found"); // and again redirect the user to 
+			client.emit('playerLeft', ["User not found"]);
+			console.log("User not found");
 		}
 	}
-
-	@SubscribeMessage('newUser')
-	async set(client: Socket, data: any[]) {
-		this.server.emit(
-			'newUser',
-			'https://cdn.intra.42.fr/users/b1ae9729487aa5e1461676416f6117c5/scoskun.png',
-		);
-	}
-
-	@SubscribeMessage('gameStop')
-	async createGame(client: Socket, data: any[]) {
-/* 		const user = await this.gameService.getClientById(client);
-		this.server.to(user.room.id).emit('stop'); */
-	}
+  
 }

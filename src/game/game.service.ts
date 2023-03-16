@@ -66,7 +66,10 @@ export class GameService {
             if (game) {
                 this.prisma.user.update({
                     where: { id: user.id, },
-                    data: { stat: Stat.IN_GAME }
+                    data: { 
+                        stat: Stat.IN_GAME, 
+                        played: user.played + 1 
+                    }
                 }).then(() => {
                     return game.hash;
                 });
@@ -121,5 +124,27 @@ export class GameService {
             return null;
         });
         return null;
+    }
+
+    async updateUser(userId: number, won: boolean) {
+        this.prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+            select: {
+                won: true,
+                lost: true,
+            }
+        }).then(user => {
+            let data = won ? {won: user.won + 1, lost: user.lost, stat: Stat.ONLINE} : 
+            {won: user.won, lost: user.lost + 1, stat: Stat.ONLINE };
+            this.prisma.user.update({
+                where: { id: userId, },
+                data,
+            });
+        }).catch(error => {
+            console.log("Error updating user after game ended!");
+            console.log(error);
+        })
     }
 }
