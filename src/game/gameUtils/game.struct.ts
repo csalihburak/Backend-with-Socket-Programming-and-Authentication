@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class gameStruct {
 	canvas = { width: 602, height: 300 };
-
+	name: string;
 	map: number;
 
 	leftPlayerId: number;

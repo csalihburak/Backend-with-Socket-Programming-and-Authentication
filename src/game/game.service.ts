@@ -13,27 +13,26 @@ export class GameService {
 
     async getUser(sessionToken: string) : Promise<User>{
         if (sessionToken) {
-			this.prisma.sessionToken.findFirst({
+			const session = await this.prisma.sessionToken.findFirst({
 				where: {
 					token: sessionToken,
 				}
-			}).then(session => {
-				if (session) {
-					const userId = session.userId;
-					this.prisma.user.findUnique({
-						where: {
-							id: userId,
-						}
-					}).then(user => {
-						if (user) {
-							return user;
-						}
-					})
-				} else {
-					console.log("Session not found"); // burada kullanıcıya bir hata döndürüp üç saniye içinde giriş sayfasına yönlendirelim
-                    return null
-				}
 			});
+            console.log()
+			if (session) {
+				const userId = session.userId;
+				const user = await this.prisma.user.findUnique({
+					where: {
+						id: userId,
+					}
+				});
+				if (user) {
+					return user;
+				}
+			} else {
+				console.log("Session not found"); // burada kullanıcıya bir hata döndürüp üç saniye içinde giriş sayfasına yönlendirelim
+                return null
+			}
 		}
         return null;
     }
@@ -44,13 +43,14 @@ export class GameService {
         newGame.map = game.map;
         newGame.round = game.round;
         newGame.leftPlayerId = userId;
+        newGame.name = game.gameId;
         return newGame;
     }
 
 
     async createGame(user: User, data: any[]) : Promise<Game> {
-		let hash = crypto.randomBytes(16).toString();
-        this.prisma.game.create({
+        let hash = await crypto.createHash('sha256').update( data[0] + data[1] + data[3]+ "42&gamesuhdawuıdhıuwaghdıuyaw").digest('hex');
+        const game = await this.prisma.game.create({
             data: {
                 gameId: data[0],
                 leftPlayerId: user.id,
@@ -62,23 +62,21 @@ export class GameService {
                 status: 1,
                 userCount: 0,
             }
-        }).then(game => {
-            if (game) {
-                this.prisma.user.update({
-                    where: { id: user.id, },
-                    data: { 
-                        stat: Stat.IN_GAME, 
-                        played: user.played + 1 
-                    }
-                }).then(() => {
-                    return game.hash;
-                });
-            } else {
-                console.log("Error in game creation.");
-            }
         }).catch(error => {
             throw error;
-        })
+        });
+        if (game) {
+            this.prisma.user.update({
+                where: { id: user.id, },
+                data: { 
+                    stat: Stat.IN_GAME, 
+                    played: user.played + 1 
+                }
+            });
+            return game;
+        } else {
+            console.log("Error in game creation.");
+        }
         return null;
     }
 
@@ -114,15 +112,16 @@ export class GameService {
     }
 
     async getGame(hash: string) : Promise<Game> {
-        this.prisma.game.findUnique({
+        const game = await this.prisma.game.findUnique({
             where: { hash: hash },
-        }).then(game => {
-            return game;
-        }).catch(error => {
-            console.log("Error while getting game");
-            console.log(error);
-            return null;
         });
+        if (game) {
+            return game;
+        }
+        else {
+            console.log("Error while getting game");
+            return null;
+        }
         return null;
     }
 

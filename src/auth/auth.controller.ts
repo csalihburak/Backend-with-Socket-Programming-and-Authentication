@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors,UploadedFile, Req, BadRequestException, Res, Render} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
+import { getSession } from './utils';
 import { Request, Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -28,7 +29,7 @@ export class AuthController {
 	@UseInterceptors(
 		FileInterceptor('avatar', {
 			storage: diskStorage({
-				destination: './avatars/',
+				destination: './public/images',
 				filename: (req, file, callback) => {
 					const uniqsuffix = Date.now() + '-' + Math.round(Math.random() + 1e9);
 					const ext = extname(file.originalname);
@@ -69,6 +70,18 @@ export class AuthController {
 	async validate(@Req() req) {
 		return this.authService.validateCode(req);
 	}
+
+	@Get('gameList')
+	async gameList(@Req() req: Request) {
+		const sessionToken: any = req.query.sessionToken;
+		const user = await getSession(sessionToken, this.authService.prisma);
+		if (user) {
+			console.log(user);
+			const games = await this.authService.getGames();
+		} else {
+			return user;
+		}
+	};
 
 	
 

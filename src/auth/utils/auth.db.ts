@@ -195,25 +195,29 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 	}
 }
 
-export async function getSession(req: Request, prisma: PrismaService) : Promise<User> {
-	const token = await prisma.sessionToken.findFirst({
+export async function getSession(token: string, prisma: PrismaService): Promise<any>{
+	const session = await prisma.sessionToken.findFirst({
 		where: {
-			token: req.body.sessionToken,
+			token: token,
 		},
 	});
+	console.log();
 	if (token) {
 		const user = await prisma.user.findUnique({
 			where: {
-				id: token.userId,
+				id: session.userId,
 			},
+		}).catch(error => {
+			console.log(error);
 		});
+		console.log(token);
 		if (user) {
 			delete user.pass;
 			return user;
 		} else {
-			throw JSON.stringify({ status: 501, message: "Something went wrong."});
+			return JSON.stringify({ status: 501, message: "Something went wrong."});
 		}
 	} else {
-		throw JSON.stringify({ status: 404, message: "Session not found."});
+		return JSON.stringify({ status: 404, message: "Session not found."});
 	}
 }

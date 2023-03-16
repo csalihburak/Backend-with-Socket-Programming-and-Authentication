@@ -1,6 +1,6 @@
 import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PrismaClient} from '@prisma/client';
+import { Game, PrismaClient} from '@prisma/client';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
@@ -75,5 +75,11 @@ export class AuthService {
 		} catch (error) {
 			return error;
 		}
+	}
+
+	async getGames() : Promise<Game>{
+		const games = await this.prisma.game.findMany();
+		console.log(games);
+		return;
 	}
 }

@@ -2,7 +2,7 @@ import { SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/we
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
-import { User } from '@prisma/client';
+import { Game, User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 @WebSocketGateway({
@@ -18,28 +18,30 @@ export class GameUtilsGateway {
 	constructor(public prisma: PrismaService, public gameService: GameService) {}
 	@WebSocketServer() server: Server;
 	users: Record<string, User> = {};
+	games: any[];
 
 	afterInit(server: Server) {
 		console.log('Initialized Game utils Socket');
 	}
 
 	async handleConnection(client: Socket) {
-		const query = client.handshake.query;
+ 		const query = client.handshake.query;
 		let sessionToken: any = query.sessionToken;
-		this.gameService.getUser(sessionToken).then((user) => {
-			if (user) {
-				this.users[client.id] = user;
-				console.log(`client connected: ${user.username}`);
-			} else {
-				console.log('Error!');
-			}
-		});
+		const user = await this.gameService.getUser(sessionToken);
+		if (user) {
+			this.users[client.id] = user;
+			console.log(`client connected: ${user.username}`);
+		} else {
+			console.log('Error!');
+		}
 	}
 
 	async handleDisconnect(client: Socket) {
 		const user = this.users[client.id];
-		this.users[client.id] = null;
-		console.log(`client disconnected: ${user.username}`);
+		if (user) {
+			console.log(`client disconnected: ${user.username}`);
+			this.users[client.id] = null;
+		}
 	}
 
 	@SubscribeMessage('create')
@@ -49,13 +51,9 @@ export class GameUtilsGateway {
 			try {
 				let game = await this.gameService.createGame(user, data);
 				if (game) {
-					this.server.emit('gameCreated', {
-							name: game.id,
-							gameHash: game.hash,
-							userName: user.username,
-							pictureUrl: user.pictureUrl,
-							gameStatus: game.status,
-						});
+					let data = { name: game.gameId, hash: game.hash, userName: user.username, pictureUrl: `http://142.93.164.123:3000/${user.pictureUrl}`, gameStatus: game.status }
+					//this.games.push(data);
+					//this.server.emit('gameCreated', data);
 					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
 			} catch (error) {
