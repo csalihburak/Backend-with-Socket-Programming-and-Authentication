@@ -2,14 +2,14 @@ import { gameStruct } from './gameUtils/game.struct'
 import { User, Game, Stat} from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
+import { GameUtilsGateway } from './gameUtils.gateway';
+import { GameGateaway } from './game.gateaway';
 import { Socket } from 'socket.io'
 import * as crypto from 'crypto'
 
-
 @Injectable()
 export class GameService {
-
-    constructor(public prisma: PrismaService, ) {}
+    constructor(public prisma: PrismaService) {}
 
     async getUser(sessionToken: string) : Promise<User>{
         if (sessionToken) {
@@ -18,7 +18,6 @@ export class GameService {
 					token: sessionToken,
 				}
 			});
-            console.log()
 			if (session) {
 				const userId = session.userId;
 				const user = await this.prisma.user.findUnique({
@@ -38,11 +37,11 @@ export class GameService {
     }
 
 
-    async createGameWoptions(game: Game, userId: number) : Promise<gameStruct> {
+    async createGameWoptions(game: Game, userId: string) : Promise<gameStruct> {
         const newGame = new gameStruct();
         newGame.map = game.map;
         newGame.round = game.round;
-        newGame.leftPlayerId = userId;
+        newGame.leftPlayer.id = userId;
         newGame.name = game.gameId;
         return newGame;
     }
@@ -66,7 +65,7 @@ export class GameService {
             throw error;
         });
         if (game) {
-            this.prisma.user.update({
+            await this.prisma.user.update({
                 where: { id: user.id, },
                 data: { 
                     stat: Stat.IN_GAME, 
@@ -126,24 +125,21 @@ export class GameService {
     }
 
     async updateUser(userId: number, won: boolean) {
-        this.prisma.user.findUnique({
+        const user = await this.prisma.user.findFirst({
             where: {
                 id: userId,
             },
-            select: {
-                won: true,
-                lost: true,
-            }
-        }).then(user => {
+        }).catch(error => {
+            console.log("Error updating user after game ended!");
+            console.log(error);
+        })
+        if (user) {
             let data = won ? {won: user.won + 1, lost: user.lost, stat: Stat.ONLINE} : 
             {won: user.won, lost: user.lost + 1, stat: Stat.ONLINE };
             this.prisma.user.update({
                 where: { id: userId, },
                 data,
             });
-        }).catch(error => {
-            console.log("Error updating user after game ended!");
-            console.log(error);
-        })
+        }
     }
 }

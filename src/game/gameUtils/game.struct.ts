@@ -92,7 +92,7 @@ export function update(game: gameStruct) {
 			game.ball.velocityX = +game.ball.velocityX;
 		} else if ( ((game.ball.y + game.ball.radius) > game.canvas.height) || ((game.ball.y - game.ball.radius) < 0)) {
 			
-		game.ball.velocityY = -game.ball.velocityY;
+			game.ball.velocityY = -game.ball.velocityY;
 		} else if ( ((game.ball.x - game.ball.radius) < 0) || ((game.ball.x + game.ball.radius) > game.canvas.width) ) {
 		
 			game.ball.velocityX = +game.ball.velocityX;
@@ -126,6 +126,7 @@ export function prup(game: gameStruct, key: any, playerSide: string) {
 			game.downPressed2 = false;
 		}
 	}
+	return game;
 }
 
 export function prdown(game: gameStruct, key: any, playerSide: string) {
@@ -142,4 +143,5 @@ export function prdown(game: gameStruct, key: any, playerSide: string) {
 			game.downPressed2 = true;
 		}
 	}
+	return game;
 }

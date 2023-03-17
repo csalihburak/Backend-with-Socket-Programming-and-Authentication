@@ -4,18 +4,19 @@ import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { Game, User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { GameGateaway } from './game.gateaway';
 
 @WebSocketGateway({
 	namespace: '/socket/gameUtils',
 	cors: {
-		origin: 'http://142.93.164.123:3001',
+		origin: 'http://142.93.104.99:3000',
 		methods: ['GET', 'POST'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		credentials: true,
 	},
 })
 export class GameUtilsGateway {
-	constructor(public prisma: PrismaService, public gameService: GameService) {}
+	constructor(public prisma: PrismaService, public gameService: GameService, public utils: GameGateaway) {}
 	@WebSocketServer() server: Server;
 	users: Record<string, User> = {};
 	games: any[];
@@ -94,4 +95,32 @@ export class GameUtilsGateway {
 			});
 		}
 	}
+
+	@SubscribeMessage('start')
+	async firstStart(client: Socket, data: any) {
+		return await this.utils.startGame(client, data, this.server);
+	}
+
+	@SubscribeMessage('prUp')
+	async prup(client: Socket, key: any[]) {
+		this.utils.prup(client, key, this.server);
+	}
+
+	@SubscribeMessage('prDown')
+	async prdown(client: Socket, key: any[]) {
+		this.utils.prdown(client, key, this.server);
+	}
+
+	@SubscribeMessage('update')
+	async updatelocation(client: Socket, data: any[]) {
+		this.utils.updatelocation(client, data, this.server);
+	}
+
+	@SubscribeMessage('sendMessage')
+	async sendMessage(client: Socket, data: any[]) {
+		this.utils.state(client, data, this.server);
+	}
+
+
+
 }
