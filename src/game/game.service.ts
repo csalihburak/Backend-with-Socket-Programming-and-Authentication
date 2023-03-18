@@ -1,10 +1,7 @@
+import { PrismaService } from 'src/prisma/prisma.service';
 import { gameStruct } from './gameUtils/game.struct'
 import { User, Game, Stat} from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { GameUtilsGateway } from './gameUtils.gateway';
-import { GameGateaway } from './game.gateaway';
-import { Socket } from 'socket.io'
 import * as crypto from 'crypto'
 
 @Injectable()
@@ -19,12 +16,14 @@ export class GameService {
 				}
 			});
 			if (session) {
-				const userId = session.userId;
+                const userId = session.userId;
 				const user = await this.prisma.user.findUnique({
-					where: {
-						id: userId,
+                    where: {
+                        id: userId,
 					}
-				});
+				}).catch(error => {
+                    console.log(error);
+                })
 				if (user) {
 					return user;
 				}

@@ -15,11 +15,11 @@ export class AuthController {
 		if (!query.code)
 			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
 			const response = await this.authService.intraGet(query.code, req);
-			const parse = JSON.parse(response);
+			const parse= JSON.parse(response);
 			if (parse.status == 200) {
-				res.redirect(`http://142.93.104.99:3000/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+				res.redirect(`http://142.93.164.123:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
 			} else {
-				res.redirect(`http://142.93.104.99:3000/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
+				res.redirect(`http://142.93.164.123:3001/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
 			}
 			res.end();
 			return;

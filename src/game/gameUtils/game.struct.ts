@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Socket } from 'socket.io';
 
 
 @Injectable()
@@ -6,7 +7,7 @@ export class gameStruct {
 	canvas = { width: 602, height: 300 };
 	name: string;
 	map: number;
-
+	status: number = 1;
 	leftPlayerId: number;
 	rightPlayerId: number;
 	round: number;

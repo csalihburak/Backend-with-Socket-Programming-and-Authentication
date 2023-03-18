@@ -12,9 +12,13 @@ export class GameGateaway {
 	@WebSocketServer() server: Server;
 	games: Record<string, gameStruct> = {};
 	users: Record<string, User> = {};
+	clients: Socket[] = [];
 
-	afterInit(server: Server) {
-		console.log('Initialized Game Socket');
+	async handleGameEnd(gameHash: any) {
+		this.clients.forEach(user => {
+			user.leave(gameHash);
+		});
+		this.games[gameHash] = null;
 	}
 
 	async startGame(client: Socket, query: any, server: any) {
@@ -30,21 +34,25 @@ export class GameGateaway {
 						client.join(gameHash);
 					 	const newGame = await this.gameService.createGameWoptions( game,  client.id);
 						if (newGame) {
+							this.clients.push(client);
+							newGame.status = 1;
+							client.join(gameHash);
 							newGame.leftPlayer.name = user.username;
 							this.games[gameHash] = newGame;
 							client.emit('initalize', newGame);
-							server.to(gameHash).emit('startGame');
+							client.emit('startGame');
 							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
 						}
 						return JSON.stringify({status: 200, gameHash: gameHash})
 					} else if (user.id == game.rightPlayerId) {
 						let play = this.games[gameHash];
 						if (play) {
+							client.join(gameHash);
 							play.rightPlayerId = user.id;
 							play.rightPlayer.id = client.id;
 							play.rightPlayer.name = user.username;
 							server.to(gameHash).emit('initalize', play);
-							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl,);
+							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
 							server.to(gameHash).emit('startGame');
 						} else {
 							console.log('Game not found');
@@ -66,22 +74,6 @@ export class GameGateaway {
 				client.emit('playerLeft', ['Game not found']);
 			}
 		}
-	}
-
-	async handleDisconnect(client: Socket) {
-/* 		const user = this.users[client.id];
-		if (user) {
-			for (const key in this.games) {
-				if (this.games.hasOwnProperty(key)) {
-					const game = this.games[key];
-					if (user.id == game.leftPlayerId || user.id == game.rightPlayerId) {
-						server.to(key).emit('playerLeft');
-					} else {
-						server.to(key).emit('userLeft', [user.pictureUrl]);
-					}
-				}
-			}
-		} */
 	}
 
 	async prup(client: Socket, key: any[], server: Server) {
@@ -120,27 +112,27 @@ export class GameGateaway {
 		let user = this.users[client.id];
 		if (user) {
 			let game = this.games[data[0]];
-			if (game) {
-				server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer });
-				update(game);
+			if (game && game.status == 1) {
 				if (game.leftPlayer.score >= game.round) {
 					server.to(data[0]).emit('endOfGame', game.leftPlayer.name);
 					this.gameService.updateUser(game.leftPlayerId, true);
 					this.gameService.updateUser(game.rightPlayerId, false);
 					server.to(data[0]).emit('endOfGame', game.leftPlayer.name);
+					this.games[data[0]].status = 0;
+					this.handleGameEnd(data[0]);
 				} else if (game.rightPlayer.score >= game.round) {
 					server.to(data[0]).emit('endOfGame', game.rightPlayer.name);
 					this.gameService.updateUser(game.rightPlayerId, true);
 					this.gameService.updateUser(game.leftPlayerId, false);
 					server.to(data[0]).emit('endOfGame', game.rightPlayer.name);
+					this.games[data[0]].status = 0;
+					this.handleGameEnd(data[0]);
 				}
-			} else {
-				client.emit('playerLeft', ['Game not found']);
-				console.log('Game not found');
+				update(game);
+				server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer, map: game.map });
+			} 	else {
+				client.emit('playerLeft', ['Game is ended']);
 			}
-		} else {
-			client.emit('playerLeft', ['User not found']);
-			console.log('User not found');
 		}
 	}
 

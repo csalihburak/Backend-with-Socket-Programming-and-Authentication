@@ -9,7 +9,7 @@ import { GameGateaway } from './game.gateaway';
 @WebSocketGateway({
 	namespace: '/socket/gameUtils',
 	cors: {
-		origin: 'http://142.93.104.99:3000',
+		origin: 'http://142.93.164.123:3001',
 		methods: ['GET', 'POST'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		credentials: true,
@@ -19,7 +19,7 @@ export class GameUtilsGateway {
 	constructor(public prisma: PrismaService, public gameService: GameService, public utils: GameGateaway) {}
 	@WebSocketServer() server: Server;
 	users: Record<string, User> = {};
-	games: any[];
+	games: any[] = [];
 
 	afterInit(server: Server) {
 		console.log('Initialized Game utils Socket');
@@ -45,6 +45,11 @@ export class GameUtilsGateway {
 		}
 	}
 
+	async test(data: any) {
+		await this.games.push(data);
+		await this.server.emit('gameCreated', data);
+	}
+
 	@SubscribeMessage('create')
 	async createGame(client: Socket, data: any[]) {
 		const user = this.users[client.id];
@@ -53,8 +58,7 @@ export class GameUtilsGateway {
 				let game = await this.gameService.createGame(user, data);
 				if (game) {
 					let data = { name: game.gameId, hash: game.hash, userName: user.username, pictureUrl: `http://142.93.164.123:3000/${user.pictureUrl}`, gameStatus: game.status }
-					//this.games.push(data);
-					//this.server.emit('gameCreated', data);
+					const bekle = await this.test(data);
 					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
 			} catch (error) {
