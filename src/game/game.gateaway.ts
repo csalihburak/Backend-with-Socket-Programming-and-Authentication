@@ -36,31 +36,29 @@ export class GameGateaway {
 						if (newGame) {
 							this.clients.push(client);
 							newGame.status = 1;
-							client.join(gameHash);
 							newGame.leftPlayer.name = user.username;
 							this.games[gameHash] = newGame;
 							client.emit('initalize', newGame);
-							client.emit('startGame');
 							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
 						}
 						return JSON.stringify({status: 200, gameHash: gameHash})
 					} else if (user.id == game.rightPlayerId) {
 						let play = this.games[gameHash];
 						if (play) {
-							client.join(gameHash);
 							play.rightPlayerId = user.id;
 							play.rightPlayer.id = client.id;
 							play.rightPlayer.name = user.username;
 							server.to(gameHash).emit('initalize', play);
 							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
 							server.to(gameHash).emit('startGame');
+							console.log(client.rooms);
+							return null;
 						} else {
 							console.log('Game not found');
 							client.emit('playerLeft', ['Game not found']);
 							return null;
 						}
 					} else {
-						client.join(gameHash);
 						client.emit('start');
 						server
 							.to(gameHash)
@@ -120,6 +118,7 @@ export class GameGateaway {
 					server.to(data[0]).emit('endOfGame', game.leftPlayer.name);
 					this.games[data[0]].status = 0;
 					this.handleGameEnd(data[0]);
+					server.emit('updateGames', this.games);
 				} else if (game.rightPlayer.score >= game.round) {
 					server.to(data[0]).emit('endOfGame', game.rightPlayer.name);
 					this.gameService.updateUser(game.rightPlayerId, true);
@@ -127,6 +126,7 @@ export class GameGateaway {
 					server.to(data[0]).emit('endOfGame', game.rightPlayer.name);
 					this.games[data[0]].status = 0;
 					this.handleGameEnd(data[0]);
+					server.emit('updateGames', this.games);
 				}
 				update(game);
 				server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer, map: game.map });
@@ -136,10 +136,10 @@ export class GameGateaway {
 		}
 	}
 
-	async state(client: Socket, data: any[], server: Server) {
+	async message(client: Socket, data: any[], server: Server) {
 		let user = this.users[client.id];
 		if (user) {
-			server .to(data).emit('getMessage', [ user.username, data[1], data[2] ]);
+			server.to(data).emit('getMessage', [user.username, data[1], data[2], data[3]]);
 		} else {
 			client.emit('playerLeft', ['User not found']);
 			console.log('User not found');

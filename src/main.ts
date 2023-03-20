@@ -1,5 +1,5 @@
-import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { CorsMiddleware } from '@nest-middlewares/cors';
 import { ValidationPipe } from '@nestjs/common';
 import * as useragent from 'express-useragent';
 import * as cookieParser from 'cookie-parser';
@@ -8,8 +8,6 @@ import { AppModule } from './app.module';
 import * as requestIp from 'request-ip';
 import * as geoip from 'geoip-lite';
 import * as express from 'express';
-import { join } from 'path';
-import * as ejs from 'ejs';
 
 async function bootstrap() {
 	const app = await NestFactory.create<NestExpressApplication>(AppModule);

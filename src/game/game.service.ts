@@ -81,31 +81,31 @@ export class GameService {
 
     async updateGame(user: User, game: Game) : Promise<Game> {
         if (game.userCount == 1) {
-            this.prisma.game.update({
+            const updatedGame = await this.prisma.game.update({
                 where: { id: game.id },
                 data: {
                     rightPlayerId: user.id,
                     userCount: 2,
                     status: 2,
                 },
-            }).then((game) => {
-                
-                return 
             }).catch(error => {
                 console.log("Error while joining for play");
                 return null;
             });
+            return updatedGame;
         } else {
-            this.prisma.game.update({
+            const updatedGame = await this.prisma.game.update({
                 where: { id: game.id },
-                data: { userCount: game.userCount + 1 }
-            }).then(game => {
-                return JSON.stringify({statu: 200, gameHash: game.hash});
+                data: { 
+                    rightPlayerId: user.id,
+                    userCount: game.userCount + 1
+                }
             }).catch(error => {
                 console.log("Error while joining for watch");
                 return null;
             });
-            return null;
+            console.log(updatedGame);
+            return updatedGame;
         }
     }
 
@@ -133,12 +133,27 @@ export class GameService {
             console.log(error);
         })
         if (user) {
+            let win = 0;
+            let lost = 0;
             let data = won ? {won: user.won + 1, lost: user.lost, stat: Stat.ONLINE} : 
             {won: user.won, lost: user.lost + 1, stat: Stat.ONLINE };
-            this.prisma.user.update({
-                where: { id: userId, },
-                data,
-            });
+            if (won)
+                win = user.won + 1;
+            else 
+                lost = user.lost + 1;
+            console.log(win);
+            console.log(lost);
+            const updatedUser = await this.prisma.user.update({
+                where: { id: user.id, },
+                data: {
+                    won: win,
+                    lost: lost,
+                    stat: Stat.ONLINE,
+                },
+            }).catch(error => {
+                console.log(error);
+            })
+            console.log(updatedUser);
         }
     }
 }

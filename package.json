@@ -28,7 +28,7 @@
     "@nest-middlewares/cors": "^7.0.1",
     "@nestjs-modules/mailer": "^1.8.1",
     "@nestjs/axios": "^2.0.0",
-    "@nestjs/common": "^9.3.9",
+    "@nestjs/common": "^9.3.10",
     "@nestjs/config": "github:nestjs/config",
     "@nestjs/core": "^9.0.0",
     "@nestjs/platform-express": "^9.3.9",

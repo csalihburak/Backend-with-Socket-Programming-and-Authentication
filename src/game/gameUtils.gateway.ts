@@ -2,9 +2,12 @@ import { SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/we
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
-import { Game, User } from '@prisma/client';
+import { Game, Stat, User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { GameGateaway } from './game.gateaway';
+
+
+//Don't forget the add gameUpdate after disconnect 
 
 @WebSocketGateway({
 	namespace: '/socket/gameUtils',
@@ -46,8 +49,8 @@ export class GameUtilsGateway {
 	}
 
 	async test(data: any) {
-		await this.games.push(data);
-		await this.server.emit('gameCreated', data);
+		this.games.push(data);
+		this.server.emit('gameCreated', data);
 	}
 
 	@SubscribeMessage('create')
@@ -78,31 +81,70 @@ export class GameUtilsGateway {
 	async joinGame(client: Socket, data: any[]) {
 		const user = this.users[client.id];
 		let gameHash = data[0];
-		let game = await this.gameService.getGame(gameHash);
-		if (game) {
-			this.gameService.updateGame(user, game).then((game) => {
-				if (game) {
-					this.server.emit('gameUpdated', {
-						name: game.id,
-						gameHash: game.hash,
-						userName: user.username,
-						pictureUrl: user.pictureUrl,
-						gameStatus: game.status,
-					});
-					return JSON.stringify({ statu: 200, gameHash: game.hash });
+		if (user) {
+			let game = await this.gameService.getGame(gameHash);
+			if (game) {
+				const updatedGame = await this.gameService.updateGame(user, game);
+				if (updatedGame) {
+					console.log(updatedGame);
+					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
-			});
-		} else {
-			return JSON.stringify({
-				statu: 203,
-				message: 'Game not found(Maybe is finished or never created)',
-			});
+			} else {
+				return JSON.stringify({
+					statu: 203,
+					message: 'Game not found(Maybe is finished or never created)',
+				});
+			}
 		}
 	}
 
+
+	@SubscribeMessage('games')
+	async getAllGames(client: Socket) {
+		const user = this.users[client.id];
+		if (user) {
+			return (this.games);
+		} else {
+			console.log('User not found');
+		}
+	}
+
+	@SubscribeMessage('endGame')
+	async endGame(client: Socket, hash: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const game = this.gameService.getGame(hash);
+			if (game) {
+				for (let i = 0; i < this.games.length; i++) {
+					if (this.games[i].hash == hash) {
+						console.log(`${this.games[i].name} is deleted`);
+						this.prisma.user.update({
+							where: {
+								id: user.id,
+							},
+							data: {
+								stat: Stat.ONLINE,
+							}
+						})
+						this.games.splice(i, 1);
+						this.server.emit('updateGames', this.games);
+						return;
+					}
+				}
+			} else {
+				console.log('Game not found');
+			}
+		} else {
+			console.log('user not found');
+		}
+	}
+
+
 	@SubscribeMessage('start')
 	async firstStart(client: Socket, data: any) {
-		return await this.utils.startGame(client, data, this.server);
+		const game = await this.utils.startGame(client, data, this.server);
+		console.log(game);
+		return;
 	}
 
 	@SubscribeMessage('prUp')
@@ -122,9 +164,7 @@ export class GameUtilsGateway {
 
 	@SubscribeMessage('sendMessage')
 	async sendMessage(client: Socket, data: any[]) {
-		this.utils.state(client, data, this.server);
+		this.utils.message(client, data, this.server);
 	}
-
-
 
 }
