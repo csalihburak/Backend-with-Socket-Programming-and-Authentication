@@ -35,6 +35,31 @@ export class GameService {
         return null;
     }
 
+    async getUsers(game : Game) : Promise<any[]>{ 
+        const pictures = [];
+        const gameUsers = await this.prisma.game.findUnique({
+            where: {
+                id: game.id,
+            },
+            select: {
+                userIds: true,
+            }
+        });
+        const users = await this.prisma.user.findMany({
+            where: {
+                id: {in: gameUsers.userIds},
+            },
+            select: {
+                pictureUrl: true,
+            }
+        });
+        users.forEach(user => {
+            pictures.push(`http://142.93.164.123:3000/${user.pictureUrl}`)
+        });
+        return pictures;
+    }
+
+
 
     async createGameWoptions(game: Game, userId: string) : Promise<gameStruct> {
         const newGame = new gameStruct();
@@ -58,6 +83,7 @@ export class GameService {
                 private: data[3],
                 hash,
                 status: 1,
+                userIds: [user.id],
                 userCount: 0,
             }
         }).catch(error => {
@@ -80,12 +106,13 @@ export class GameService {
 
 
     async updateGame(user: User, game: Game) : Promise<Game> {
-        if (game.userCount == 1) {
+        if (game.userCount == 0) {
             const updatedGame = await this.prisma.game.update({
                 where: { id: game.id },
                 data: {
                     rightPlayerId: user.id,
-                    userCount: 2,
+                    userCount: 1,
+                    userIds: {push: user.id},
                     status: 2,
                 },
             }).catch(error => {
@@ -93,18 +120,17 @@ export class GameService {
                 return null;
             });
             return updatedGame;
-        } else {
+        }  else {
             const updatedGame = await this.prisma.game.update({
                 where: { id: game.id },
-                data: { 
-                    rightPlayerId: user.id,
-                    userCount: game.userCount + 1
+                data: {
+                    userCount: game.userCount + 1,
+                    userIds: {push: user.id},
                 }
             }).catch(error => {
                 console.log("Error while joining for watch");
                 return null;
             });
-            console.log(updatedGame);
             return updatedGame;
         }
     }
@@ -141,8 +167,6 @@ export class GameService {
                 win = user.won + 1;
             else 
                 lost = user.lost + 1;
-            console.log(win);
-            console.log(lost);
             const updatedUser = await this.prisma.user.update({
                 where: { id: user.id, },
                 data: {
@@ -153,7 +177,6 @@ export class GameService {
             }).catch(error => {
                 console.log(error);
             })
-            console.log(updatedUser);
         }
     }
 }

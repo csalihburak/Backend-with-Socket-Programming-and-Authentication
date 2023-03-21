@@ -86,7 +86,6 @@ export class GameUtilsGateway {
 			if (game) {
 				const updatedGame = await this.gameService.updateGame(user, game);
 				if (updatedGame) {
-					console.log(updatedGame);
 					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
 			} else {
@@ -139,11 +138,9 @@ export class GameUtilsGateway {
 		}
 	}
 
-
 	@SubscribeMessage('start')
 	async firstStart(client: Socket, data: any) {
 		const game = await this.utils.startGame(client, data, this.server);
-		console.log(game);
 		return;
 	}
 

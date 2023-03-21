@@ -18,19 +18,9 @@ async function bootstrap() {
 		req.geo = geo;
 		next();
 	});
-	app.use(express.json({ limit: '50mb' }));
-	app.use(express.urlencoded({ limit: '50mb', extended: true }));
 	app.enableCors();
-	app.use(cookieParser());
 	app.use(requestIp.mw());
 	app.use(useragent.express());
-/* 	app.use('/', express.static('../messageFiles'));
-	app.use('/', express.static('../views/'));
-	app.useStaticAssets(join(__dirname, '..', 'views'));
-	app.useStaticAssets(join(__dirname, '..', 'messageFiles'));
-	app.engine('html', ejs.renderFile);
-	app.engine('html', ejs.renderFile);
-	app.setViewEngine('html'); */
 	await app.listen(3000);
 }
 bootstrap();

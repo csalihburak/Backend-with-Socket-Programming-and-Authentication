@@ -119,9 +119,7 @@ export async function check(body: any) {
 		  return JSON.stringify({ status: 200 });
 		}
   
-		const password = crypto.createHash('sha256')
-		  .update(body.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+")
-		  .digest('hex');
+		const password = crypto.createHash('sha256').update(body.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
   
 		const data: any = {
 		  pass: password,

@@ -42,6 +42,9 @@ CREATE TABLE "Games" (
     "gameId" TEXT NOT NULL,
     "private" BOOLEAN NOT NULL,
     "hash" TEXT NOT NULL,
+    "status" INTEGER NOT NULL,
+    "userIds" INTEGER[],
+    "userCount" INTEGER NOT NULL,
 
     CONSTRAINT "Games_pkey" PRIMARY KEY ("id")
 );

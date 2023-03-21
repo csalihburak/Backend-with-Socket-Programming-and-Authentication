@@ -11,7 +11,7 @@ export class gameStruct {
 	leftPlayerId: number;
 	rightPlayerId: number;
 	round: number;
-
+	isStarted = 0;
 	leftPlayer = {
 		id: '',
 		name: '',

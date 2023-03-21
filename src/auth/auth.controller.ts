@@ -5,6 +5,7 @@ import { getSession } from './utils';
 import { Request, Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import * as Jimp from 'jimp';
 
 @Controller('auth')
 export class AuthController {
@@ -14,15 +15,15 @@ export class AuthController {
 	async firstInsert(@Query() query, @Req() req: Request, @Res() res: Response) {
 		if (!query.code)
 			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
-			const response = await this.authService.intraGet(query.code, req);
-			const parse= JSON.parse(response);
-			if (parse.status == 200) {
-				res.redirect(`http://142.93.164.123:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
-			} else {
-				res.redirect(`http://142.93.164.123:3001/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
-			}
-			res.end();
-			return;
+		const response = await this.authService.intraGet(query.code, req);
+		const parse= JSON.parse(response);
+		if (parse.status == 200) {
+			res.redirect(`http://142.93.164.123:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+		} else {
+			res.redirect(`http://142.93.164.123:3001/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
+		}
+		res.end();
+		return;
 	}
 
 	@Post('signup')
@@ -40,6 +41,13 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+		Jimp.read(file.path, (err, lenna) => {
+			if (err) throw err;
+			lenna
+			  .resize(256, 256) 
+			  .quality(100)
+			  .write(file.path);
+		  });
 		return this.authService.singup(req.body, file);
 	}
 
@@ -100,6 +108,13 @@ export class AuthController {
 		}),
 	)
 	async uploadFile(@UploadedFile() file: Express.Multer.File,@Req() req, @Res() res: Response){
+ 		Jimp.read(file.path, (err, lenna) => {
+			if (err) throw err;
+			lenna
+			  .resize(256, 256) 
+			  .quality(100)
+			  .write(file.path);
+		  });
 		const url = file.path;
 		console.log(url);
 		res.send({
@@ -108,6 +123,5 @@ export class AuthController {
 			}
 		});
 		res.end();
-
 	}
 }

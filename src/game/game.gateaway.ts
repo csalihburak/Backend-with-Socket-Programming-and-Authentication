@@ -29,17 +29,18 @@ export class GameGateaway {
 			if (game) {
 				const user = await this.gameService.getUser(sessionToken);
 				if (user) {
+					const users = await this.gameService.getUsers(game);
+					this.clients.push(client);
 					this.users[client.id] = user;
+					client.join(gameHash);
 					if (user.id == game.leftPlayerId) {
-						client.join(gameHash);
-					 	const newGame = await this.gameService.createGameWoptions( game,  client.id);
+						const newGame = await this.gameService.createGameWoptions( game,  client.id);
 						if (newGame) {
-							this.clients.push(client);
 							newGame.status = 1;
 							newGame.leftPlayer.name = user.username;
 							this.games[gameHash] = newGame;
 							client.emit('initalize', newGame);
-							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
+							server.to(gameHash).emit('newUser', users);
 						}
 						return JSON.stringify({status: 200, gameHash: gameHash})
 					} else if (user.id == game.rightPlayerId) {
@@ -48,21 +49,21 @@ export class GameGateaway {
 							play.rightPlayerId = user.id;
 							play.rightPlayer.id = client.id;
 							play.rightPlayer.name = user.username;
-							server.to(gameHash).emit('initalize', play);
-							server.to(gameHash).emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
+							this.games[gameHash].isStarted = 1;
+							client.emit('initalize', play);
+							server.to(gameHash).emit('newUser', users);
 							server.to(gameHash).emit('startGame');
-							console.log(client.rooms);
-							return null;
+							return 
 						} else {
 							console.log('Game not found');
 							client.emit('playerLeft', ['Game not found']);
 							return null;
 						}
 					} else {
-						client.emit('start');
-						server
-							.to(gameHash)
-							.emit('newUser', 'http://142.93.164.123:3000/' + user.pictureUrl);
+						let play = this.games[gameHash];
+						client.emit('initalize', play);
+						client.emit('join', play);
+						server.to(gameHash).emit('newUser', users);
 					}
 				} else {
 					client.emit('playerLeft', ['User not found']);
