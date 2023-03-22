@@ -16,6 +16,7 @@ CREATE TABLE "users" (
     "lost" INTEGER NOT NULL DEFAULT 0,
     "row" INTEGER NOT NULL DEFAULT 0,
     "stat" "Stat" NOT NULL DEFAULT 'OFFLINE',
+    "point" INTEGER NOT NULL,
     "coalition" TEXT NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")

@@ -54,7 +54,7 @@ export class GameService {
             }
         });
         users.forEach(user => {
-            pictures.push(`http://142.93.164.123:3000/${user.pictureUrl}`)
+            pictures.push(`http://64.226.65.83:3000/${user.pictureUrl}`)
         });
         return pictures;
     }
@@ -146,7 +146,6 @@ export class GameService {
             console.log("Error while getting game");
             return null;
         }
-        return null;
     }
 
     async updateUser(userId: number, won: boolean) {
@@ -159,13 +158,13 @@ export class GameService {
             console.log(error);
         })
         if (user) {
-            let win = 0;
-            let lost = 0;
+            let win, lost, point = 0;
             let data = won ? {won: user.won + 1, lost: user.lost, stat: Stat.ONLINE} : 
             {won: user.won, lost: user.lost + 1, stat: Stat.ONLINE };
-            if (won)
+            if (won) {
                 win = user.won + 1;
-            else 
+                point = user.point + 3;
+            } else 
                 lost = user.lost + 1;
             const updatedUser = await this.prisma.user.update({
                 where: { id: user.id, },
@@ -173,6 +172,7 @@ export class GameService {
                     won: win,
                     lost: lost,
                     stat: Stat.ONLINE,
+                    point: point,
                 },
             }).catch(error => {
                 console.log(error);

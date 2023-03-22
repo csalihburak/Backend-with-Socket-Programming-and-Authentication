@@ -19,7 +19,7 @@ export class AuthService {
 		} catch (error) {
 			if (error.code == 'ERR_BAD_REQUEST')
 				return JSON.stringify({ status: 401, error: 'invalid_grant', message: process.env.ERROR_401 });
-			return error;
+			return error; 
 		}
 	}
 

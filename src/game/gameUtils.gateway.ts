@@ -12,7 +12,7 @@ import { GameGateaway } from './game.gateaway';
 @WebSocketGateway({
 	namespace: '/socket/gameUtils',
 	cors: {
-		origin: 'http://142.93.164.123:3001',
+		origin: 'http://64.226.65.83:3001',
 		methods: ['GET', 'POST'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		credentials: true,
@@ -60,7 +60,7 @@ export class GameUtilsGateway {
 			try {
 				let game = await this.gameService.createGame(user, data);
 				if (game) {
-					let data = { name: game.gameId, hash: game.hash, userName: user.username, pictureUrl: `http://142.93.164.123:3000/${user.pictureUrl}`, gameStatus: game.status }
+					let data = { name: game.gameId, hash: game.hash, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`, gameStatus: game.status }
 					const bekle = await this.test(data);
 					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
@@ -112,26 +112,48 @@ export class GameUtilsGateway {
 	async endGame(client: Socket, hash: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const game = this.gameService.getGame(hash);
+			const game = await this.gameService.getGame(hash);
 			if (game) {
-				for (let i = 0; i < this.games.length; i++) {
-					if (this.games[i].hash == hash) {
-						console.log(`${this.games[i].name} is deleted`);
-						this.prisma.user.update({
-							where: {
-								id: user.id,
-							},
-							data: {
-								stat: Stat.ONLINE,
-							}
-						})
-						this.games.splice(i, 1);
-						this.server.emit('updateGames', this.games);
-						return;
+				if (user.id === game.leftPlayerId || user.id === game.rightPlayerId) {
+					for (let i = 0; i < this.games.length; i++) {
+						if (this.games[i].hash == hash) {
+							console.log(`${this.games[i].name} is deleted`);
+							this.prisma.user.update({
+								where: {
+									id: user.id,
+								},
+								data: {
+									stat: Stat.ONLINE,
+								}
+							});
+							this.games.splice(i, 1);
+							this.server.emit('updateGames', this.games);
+							this.server.emit('playerLeft', user.username);
+							return;
+						}
 					}
+				} else {
+					this.prisma.game.update({
+						where: {
+							id: game.id,
+						},
+						data: {
+							userIds: {}
+						}
+					});
+					const users = await this.gameService.getUsers(game);
+					this.server.to(hash).emit('newUser', users);
+					this.prisma.user.update({
+						where: {
+							id: user.id,
+						},
+						data: {
+							stat: Stat.ONLINE,
+						}
+					});
 				}
 			} else {
-				console.log('Game not found');
+					console.log('Game not found');
 			}
 		} else {
 			console.log('user not found');

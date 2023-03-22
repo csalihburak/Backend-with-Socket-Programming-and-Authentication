@@ -31,6 +31,7 @@ model User {
   lost            Int      @default(0)
   row             Int      @default(0)
   stat            Stat     @default(OFFLINE)
+  point           Int
   coalition       String
 
   @@map("users")

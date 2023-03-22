@@ -31,6 +31,7 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
               coalition: info.coalition,
               two_factor_auth: false,
               pictureUrl: info.pictureUrl,
+			  point: 0,
             },
           });
   
