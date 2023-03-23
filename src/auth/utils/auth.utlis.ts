@@ -9,12 +9,11 @@ import * as fs from 'fs';
 
 
 export async function sendCode(data: any, validCode: number, mailerService: MailerService, prisma: PrismaService) {
-	const response = await axios.get(`https://ipinfo.io/${data.loginIp}?token=${process.env.IP_INFO}`);
+	const response = await axios.get(`https://ipinfo.io/${data.loginIp}?token=81f70b0a6cf316`);
 	const { country, region, city, postal} = response.data;
 	const user  = data.user;
 	const htmlTemplate = fs.readFileSync('src/auth/templates/emailTemplate.html', 'utf8');
-	const htmlContent = ejs.render(htmlTemplate, { validCode: validCode, user: user, country: country, region: region,
-		city: city, postal: postal, data: data });
+	const htmlContent = ejs.render(htmlTemplate, { validCode: validCode, user: user, country: country, region: region, city: city, postal: postal, data: data });
 	mailerService.sendMail({
 		to: user.email,
 		subject: 'Two-Factor Login Verification',

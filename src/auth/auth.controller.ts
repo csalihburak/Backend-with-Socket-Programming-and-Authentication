@@ -1,11 +1,10 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors,UploadedFile, Req, BadRequestException, Res, Render} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
-import { getSession } from './utils';
 import { Request, Response } from 'express';
+import { getSession } from './utils';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import * as Jimp from 'jimp';
 import * as sharp from 'sharp';
 
 @Controller('auth')
@@ -19,9 +18,9 @@ export class AuthController {
 		const response = await this.authService.intraGet(query.code, req);
 		const parse= JSON.parse(response);
 		if (parse.status == 200) {
-			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+			res.redirect(`http://142.93.104.99:3000/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
 		} else {
-			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${parse.token}&pictureUrl=${parse.imageUrl}`);
+			res.redirect(`http://142.93.104.99:3000/setProfile?sessionToken=${parse.token}`);
 		}
 		res.end();
 		return;
@@ -42,13 +41,7 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-/* 		Jimp.read(file.path, (err, lenna) => {
-			if (err) throw err;
-			lenna
-			  .resize(256, 256) 
-			  .quality(100)
-			  .write(file.path);
-		  }); */
+		const url = file.path;
 		return this.authService.singup(req.body, file);
 	}
 
@@ -64,10 +57,11 @@ export class AuthController {
 		}
 	}
 
-	@Get('game')
-	@Render('game')
-	getPage2() {
-	return { title: 'Page 2' };
+	@Get('user')
+	async user(@Req() req: Request) {
+		const sessionToken = req.query.sessionToken;
+		console.log(sessionToken);
+		return this.authService.getUser(sessionToken);
 	}
 
 	@Post('sendValidationCode')

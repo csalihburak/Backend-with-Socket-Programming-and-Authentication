@@ -44,7 +44,7 @@ export class AuthService {
 
 	async sendValidationCode(req) {
 		try {
-			const user = await getSession(req, this.prisma);
+			const user = await getSession(req.body.sessionToken, this.prisma);
 			if (user.two_factor_auth) {
 				let validCode = Math.floor((Math.random() * 9999) + 1000);
 				await sendCode({
@@ -65,6 +65,7 @@ export class AuthService {
 
 	async validateCode(req) {
 		try {
+			console.log(req.body);
 			if (!req.body.email) {
 				return JSON.stringify({status: 403, message: "Mail adresini kontrol ediniz."})
 			} else if (!req.body.code) {
@@ -79,7 +80,34 @@ export class AuthService {
 
 	async getGames() : Promise<Game>{
 		const games = await this.prisma.game.findMany();
-		console.log(games);
 		return;
+	}
+
+	async getUser(sessionToken: any) {
+		const session = await this.prisma.sessionToken.findFirst({
+			where: {
+				token: sessionToken,
+			},
+		});
+		if (session) {
+			const user = await this.prisma.user.findUnique({
+				where : {
+					id: session.userId,
+				},
+				select: {
+					username: true,
+					pictureUrl: true,
+				}
+			});
+			if (user) {
+				console.log(user);
+				return JSON.stringify({status: 200, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`});
+			} else  {
+				return JSON.stringify({status: 404, message: "User not found"});
+			}
+		} else {
+			return JSON.stringify({status: 404, message: "Session not found"});
+		}
+
 	}
 }

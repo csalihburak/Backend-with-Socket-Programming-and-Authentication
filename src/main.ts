@@ -12,7 +12,7 @@ import * as express from 'express';
 async function bootstrap() {
 	const app = await NestFactory.create<NestExpressApplication>(AppModule);
 	app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-	app.use((req, res, next) => {
+ 	app.use((req, res, next) => {
 		const ipAddress = req.ip;
 		const geo = geoip.lookup(ipAddress);
 		req.geo = geo;

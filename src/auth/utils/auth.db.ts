@@ -183,7 +183,7 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 						return JSON.stringify({status: 200, token: tokenCreated.token, twoFacAuth: resultInfo.two_factor_auth});
 					} else {
 						throw JSON.stringify({status: 203, message: "Passsword is wrong."});
-					}
+					} //two factor 
 				}
 			} else {
 				throw JSON.stringify({status: 404, message: "User not found."});
@@ -195,12 +195,12 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 }
 
 export async function getSession(token: string, prisma: PrismaService): Promise<any>{
+	console.log(token);
 	const session = await prisma.sessionToken.findFirst({
 		where: {
 			token: token,
 		},
 	});
-	console.log();
 	if (token) {
 		const user = await prisma.user.findUnique({
 			where: {
@@ -209,7 +209,6 @@ export async function getSession(token: string, prisma: PrismaService): Promise<
 		}).catch(error => {
 			console.log(error);
 		});
-		console.log(token);
 		if (user) {
 			delete user.pass;
 			return user;
