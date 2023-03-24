@@ -78,9 +78,36 @@ export class AuthService {
 		}
 	}
 
-	async getGames() : Promise<Game>{
-		const games = await this.prisma.game.findMany();
-		return;
+	async leaderBord(sessionToken: any) {
+		const session = await this.prisma.sessionToken.findFirst({
+			where: {
+				token: sessionToken,
+			},
+		});
+		if (session) {
+			const users = await this.prisma.user.findMany({
+				take: 10,
+				orderBy: {
+					point: 'desc',
+				},
+				select: {
+					username: true,
+					won: true,
+					lost: true,
+					point: true,
+					stat: true,
+				},
+			});
+			if (users) {
+				return JSON.stringify({status: 200, users: users});
+			} else {
+				console.log('hata: service 102');
+				return JSON.stringify({status: 501, message: "Something went wrong"});
+			}
+		} else {
+			return JSON.stringify({status: 404, message: "Session not found."});
+		}
+
 	}
 
 	async getUser(sessionToken: any) {
@@ -100,7 +127,6 @@ export class AuthService {
 				}
 			});
 			if (user) {
-				console.log(user);
 				return JSON.stringify({status: 200, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`});
 			} else  {
 				return JSON.stringify({status: 404, message: "User not found"});

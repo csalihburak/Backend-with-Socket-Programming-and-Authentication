@@ -107,29 +107,37 @@ export class GameGateaway {
 		}
 	}
 
+	async updateGame(game : gameStruct, data: any[], server: Server) {
+		if (game.leftPlayer.score >= game.round) {
+			this.gameService.updateUser(game.leftPlayerId, true);
+			this.gameService.updateUser(game.rightPlayerId, false);
+			server.to(data[0]).emit('endOfGame', [game.leftPlayer.name, 1]);
+			this.games[data[0]].status = 0;
+			this.handleGameEnd(data[0]);
+			return (0);
+		} else if (game.rightPlayer.score >= game.round) {
+			this.gameService.updateUser(game.rightPlayerId, true);
+			this.gameService.updateUser(game.leftPlayerId, false);
+			server.to(data[0]).emit('endOfGame', [game.rightPlayer.name, 1]);
+			this.games[data[0]].status = 0;
+			this.handleGameEnd(data[0]);
+			return (0);
+		} else {
+			update(game);
+			server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer, map: game.map });
+			return (1);
+		}
+	}
+
 	async updatelocation(client: Socket, data: any[], server: Server) {
 		let user = this.users[client.id];
 		if (user) {
 			let game = this.games[data[0]];
 			if (game && game.status == 1) {
-				if (game.leftPlayer.score >= game.round) {
-					this.gameService.updateUser(game.leftPlayerId, true);
-					this.gameService.updateUser(game.rightPlayerId, false);
-					server.to(data[0]).emit('endOfGame', [game.leftPlayer.name, 1]);
-					this.games[data[0]].status = 0;
-					this.handleGameEnd(data[0]);
-					server.emit('updateGames', this.games);
-				} else if (game.rightPlayer.score >= game.round) {
-					this.gameService.updateUser(game.rightPlayerId, true);
-					this.gameService.updateUser(game.leftPlayerId, false);
-					server.to(data[0]).emit('endOfGame', [game.rightPlayer.name, 1]);
-					this.games[data[0]].status = 0;
-					this.handleGameEnd(data[0]);
-					server.emit('updateGames', this.games);
+				if (!(this.updateGame(game, data, server))) {
+					this.gameService.addGameHistory(game, user);
 				}
-				update(game);
-				server.to(data[0]).emit('update', { ball: game.ball, leftPlayer: game.leftPlayer, rightPlayer: game.rightPlayer, map: game.map });
-			} 	else {
+			} else {
 				client.emit('playerLeft', ['Game is ended']);
 			}
 		}

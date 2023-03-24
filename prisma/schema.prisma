@@ -10,29 +10,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Stat {
+enum stat {
   ONLINE
   OFFLINE
   IN_GAME
   BUSY
 }
 
+//num achievements {
+// First_Win //"Awarded to players who win their first game of Pong on our website."
+// Pong_Pro //"Awarded to players who win 10 games of Pong on on our website."
+// Perfect_Game //"Awarded to players who win a game of Pong without their opponent scoring a single point"
+// Streak_Master //"Awarded to players who win 5 consecutive games of Pong on our website"
+// Social_Butterfly //"Awarded to players who chat with 5 different player on our website."
+//
+
 model User {
-  id              Int      @id @default(autoincrement())
-  username        String   @unique
+  id              Int            @id @default(autoincrement())
+  username        String         @unique
   pass            String
-  email           String   @unique
+  email           String         @unique
   fullName        String
   pictureUrl      String
-  createdAt       DateTime @default(now())
-  two_factor_auth Boolean  @default(false)
-  played          Int      @default(0)
-  won             Int      @default(0)
-  lost            Int      @default(0)
-  row             Int      @default(0)
-  stat            Stat     @default(OFFLINE)
-  point           Int
-  coalition       String
+  createdAt       DateTime       @default(now())
+  two_factor_auth Boolean        @default(false)
+  stat            stat           @default(OFFLINE)
+  played          Int            @default(0)
+  won             Int            @default(0)
+  lost            Int            @default(0)
+  row             Int            @default(0)
+  achievements    String[]
+  friends         Int[]
+  point     Int
+  coalition String
 
   @@map("users")
 }
@@ -60,7 +70,7 @@ model Game {
   userIds       Int[]
   userCount     Int
 
-  @@map("Games")
+  @@map("games")
 }
 
 model Validate {
@@ -71,4 +81,15 @@ model Validate {
   expired_date DateTime @default(now())
 
   @@map("validations")
+}
+
+model GameHistory {
+  id               Int      @id @default(autoincrement())
+  leftPlayerId     Int
+  rightPlayerId    Int
+  leftPlayerScore  Int
+  rightPlayerScore Int
+  gameTime         DateTime @default(now())
+
+  @@map("gameHistorys")
 }

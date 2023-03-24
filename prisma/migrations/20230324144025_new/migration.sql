@@ -1,5 +1,8 @@
 -- CreateEnum
-CREATE TYPE "Stat" AS ENUM ('ONLINE', 'OFFLINE', 'IN_GAME', 'BUSY');
+CREATE TYPE "stat" AS ENUM ('ONLINE', 'OFFLINE', 'IN_GAME', 'BUSY');
+
+-- CreateEnum
+CREATE TYPE "achievements" AS ENUM ('First_Win', 'Pong_Pro', 'Perfect_Game', 'Streak_Master', 'Social_Butterfly');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -11,11 +14,12 @@ CREATE TABLE "users" (
     "pictureUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "two_factor_auth" BOOLEAN NOT NULL DEFAULT false,
+    "stat" "stat" NOT NULL DEFAULT 'OFFLINE',
     "played" INTEGER NOT NULL DEFAULT 0,
     "won" INTEGER NOT NULL DEFAULT 0,
     "lost" INTEGER NOT NULL DEFAULT 0,
     "row" INTEGER NOT NULL DEFAULT 0,
-    "stat" "Stat" NOT NULL DEFAULT 'OFFLINE',
+    "achievements" "achievements"[],
     "point" INTEGER NOT NULL,
     "coalition" TEXT NOT NULL,
 
@@ -34,7 +38,7 @@ CREATE TABLE "sessionTokens" (
 );
 
 -- CreateTable
-CREATE TABLE "Games" (
+CREATE TABLE "games" (
     "id" SERIAL NOT NULL,
     "leftPlayerId" INTEGER NOT NULL,
     "rightPlayerId" INTEGER NOT NULL,
@@ -47,7 +51,7 @@ CREATE TABLE "Games" (
     "userIds" INTEGER[],
     "userCount" INTEGER NOT NULL,
 
-    CONSTRAINT "Games_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "games_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -61,6 +65,18 @@ CREATE TABLE "validations" (
     CONSTRAINT "validations_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "gameHistorys" (
+    "id" SERIAL NOT NULL,
+    "leftPlayerId" INTEGER NOT NULL,
+    "rightPlayerId" INTEGER NOT NULL,
+    "leftPlayerScore" INTEGER NOT NULL,
+    "rightPlayerScore" INTEGER NOT NULL,
+    "gameTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "gameHistorys_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
@@ -71,4 +87,4 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "sessionTokens_token_key" ON "sessionTokens"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Games_hash_key" ON "Games"("hash");
+CREATE UNIQUE INDEX "games_hash_key" ON "games"("hash");

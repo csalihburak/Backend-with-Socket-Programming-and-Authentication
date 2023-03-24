@@ -6,6 +6,7 @@ import { getSession } from './utils';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as sharp from 'sharp';
+import * as Jimp from 'jimp';
 
 @Controller('auth')
 export class AuthController {
@@ -41,7 +42,13 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-		const url = file.path;
+		Jimp.read(file.path, (err, lenna) => {
+			if (err) throw err;
+			lenna
+			  .resize(256, 256) 
+			  .quality(100)
+			  .write(file.path);
+		  });
 		return this.authService.singup(req.body, file);
 	}
 
@@ -60,8 +67,13 @@ export class AuthController {
 	@Get('user')
 	async user(@Req() req: Request) {
 		const sessionToken = req.query.sessionToken;
-		console.log(sessionToken);
 		return this.authService.getUser(sessionToken);
+	}
+
+	@Get('leaderBoard')
+	async leaderBord(@Req() req: Request) {
+		const sessionToken = req.query.sessionToken;
+		return this.authService.leaderBord(sessionToken);
 	}
 
 	@Post('sendValidationCode')
@@ -74,25 +86,12 @@ export class AuthController {
 		return this.authService.validateCode(req);
 	}
 
-	@Get('gameList')
-	async gameList(@Req() req: Request) {
-		const sessionToken: any = req.query.sessionToken;
-		const user = await getSession(sessionToken, this.authService.prisma);
-		if (user) {
-			console.log(user);
-			const games = await this.authService.getGames();
-		} else {
-			return user;
-		}
-	};
-
-	
 
 	@Post('uploads')
 	@UseInterceptors(
 		FileInterceptor('file', {
 			storage: diskStorage({
-				destination: './public/chatImages/', // buraya bir crontab ekleyebiliriz çok fazla resim biriktiğinde ya da oyun bittiğinde direkt temizlemek için
+				destination: './public/chatImages/',
 				filename: (req, file, callback) => {
 					const uniqsuffix = Date.now();
 					const ext = extname(file.originalname);
@@ -103,11 +102,14 @@ export class AuthController {
 		}),
 	)
 	async uploadFile(@UploadedFile() file: Express.Multer.File , @Res() res: Response){
-		await sharp(file.buffer)
-			.resize(800)
-			.toFile(file.path);
+		Jimp.read(file.path, (err, lenna) => {
+			if (err) throw err;
+			lenna
+			  .resize(256, 256) 
+			  .quality(100)
+			  .write(file.path);
+		  });
 		const url = file.path;
-		console.log(url);
 		res.send({
 			body: {
 				url: url,

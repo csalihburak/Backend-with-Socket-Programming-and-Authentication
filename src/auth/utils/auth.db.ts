@@ -1,6 +1,6 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { BadRequestException } from '@nestjs/common';
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, stat, User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { AuthDto, signIndto, UserInputDto } from '.';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -180,10 +180,18 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 								token: sessionToken,
 							},
 						});
+						const updateStat = await prisma.user.update({
+							where: {
+								username: user.username,
+							},
+							data: {
+								stat: stat.ONLINE,
+							},
+						});
 						return JSON.stringify({status: 200, token: tokenCreated.token, twoFacAuth: resultInfo.two_factor_auth});
 					} else {
 						throw JSON.stringify({status: 203, message: "Passsword is wrong."});
-					} //two factor 
+					}
 				}
 			} else {
 				throw JSON.stringify({status: 404, message: "User not found."});

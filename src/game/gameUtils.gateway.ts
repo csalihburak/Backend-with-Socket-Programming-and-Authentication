@@ -2,21 +2,12 @@ import { SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/we
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
-import { Game, Stat, User } from '@prisma/client';
+import { Game, stat, User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { GameGateaway } from './game.gateaway';
 
-
-//Don't forget the add gameUpdate after disconnect 
-
 @WebSocketGateway({
-	namespace: '/socket/gameUtils',
-	cors: {
-		origin: 'http://64.226.65.83:3001',
-		methods: ['GET', 'POST'],
-		allowedHeaders: ['Content-Type', 'Authorization'],
-		credentials: true,
-	},
+	namespace: '/socket/gameUtils', cors: { origin: 'http://64.226.65.83:3001', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'], credentials: true },
 })
 export class GameUtilsGateway {
 	constructor(public prisma: PrismaService, public gameService: GameService, public utils: GameGateaway) {}
@@ -34,9 +25,10 @@ export class GameUtilsGateway {
 		const user = await this.gameService.getUser(sessionToken);
 		if (user) {
 			this.users[client.id] = user;
+			client.emit('updateGames', this.games);
 			console.log(`client connected: ${user.username}`);
 		} else {
-			console.log('Error!');
+			console.log('Error! user not found on connection');
 		}
 	}
 
@@ -123,7 +115,7 @@ export class GameUtilsGateway {
 									id: user.id,
 								},
 								data: {
-									stat: Stat.ONLINE,
+									stat: stat.ONLINE,
 								}
 							});
 							this.games.splice(i, 1);
@@ -148,7 +140,7 @@ export class GameUtilsGateway {
 							id: user.id,
 						},
 						data: {
-							stat: Stat.ONLINE,
+							stat: stat.ONLINE,
 						}
 					});
 				}
@@ -185,5 +177,4 @@ export class GameUtilsGateway {
 	async sendMessage(client: Socket, data: any[]) {
 		this.utils.message(client, data, this.server);
 	}
-
 }
