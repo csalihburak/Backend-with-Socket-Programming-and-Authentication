@@ -1,26 +1,27 @@
-import { SubscribeMessage, WebSocketGateway, WebSocketServer, } from '@nestjs/websockets';
+import { SubscribeMessage, WebSocketGateway, WebSocketServer,} from '@nestjs/websockets';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Server, Socket } from 'socket.io';
-import { GameService } from './game.service';
 import { Game, stat, User } from '@prisma/client';
-import { Prisma } from '@prisma/client';
 import { GameGateaway } from './game.gateaway';
+import { GameService } from './game.service';
+import { Server, Socket } from 'socket.io';
+import { Prisma } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 
-@WebSocketGateway({
-	namespace: '/socket/gameUtils', cors: { origin: 'http://64.226.65.83:3001', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'], credentials: true },
-})
-export class GameUtilsGateway {
-	constructor(public prisma: PrismaService, public gameService: GameService, public utils: GameGateaway) {}
+@WebSocketGateway({ namespace: '/socket/gameUtils' })
+export class GameUtilsGateway 
+{
+	constructor( public prisma: PrismaService, public gameService: GameService, public utils: GameGateaway ) {}
 	@WebSocketServer() server: Server;
+	private logger: Logger = new Logger('game');
 	users: Record<string, User> = {};
 	games: any[] = [];
 
 	afterInit(server: Server) {
-		console.log('Initialized Game utils Socket');
+		this.logger.log('Initialized Game utils Socket');
 	}
 
 	async handleConnection(client: Socket) {
- 		const query = client.handshake.query;
+		const query = client.handshake.query;
 		let sessionToken: any = query.sessionToken;
 		const user = await this.gameService.getUser(sessionToken);
 		if (user) {
@@ -52,14 +53,23 @@ export class GameUtilsGateway {
 			try {
 				let game = await this.gameService.createGame(user, data);
 				if (game) {
-					let data = { name: game.gameId, hash: game.hash, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`, gameStatus: game.status }
+					let data = {
+						name: game.gameId,
+						hash: game.hash,
+						userName: user.username,
+						pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`,
+						gameStatus: game.status,
+					};
 					const bekle = await this.test(data);
 					return JSON.stringify({ status: 200, gameHash: game.hash });
 				}
 			} catch (error) {
 				if (error instanceof Prisma.PrismaClientKnownRequestError) {
 					if (error.code === 'P2002') {
-						return JSON.stringify({ status: 403, message: 'Room already exist' });
+						return JSON.stringify({
+							status: 403,
+							message: 'Room already exist',
+						});
 					}
 				}
 				return error;
@@ -89,12 +99,11 @@ export class GameUtilsGateway {
 		}
 	}
 
-
 	@SubscribeMessage('games')
 	async getAllGames(client: Socket) {
 		const user = this.users[client.id];
 		if (user) {
-			return (this.games);
+			return this.games;
 		} else {
 			console.log('User not found');
 		}
@@ -116,7 +125,7 @@ export class GameUtilsGateway {
 								},
 								data: {
 									stat: stat.ONLINE,
-								}
+								},
 							});
 							this.games.splice(i, 1);
 							this.server.emit('updateGames', this.games);
@@ -125,13 +134,13 @@ export class GameUtilsGateway {
 						}
 					}
 				} else {
-					this.prisma.game.update({
+					this.prisma.game.update({ //buraya bir düzeltme gelecek
 						where: {
 							id: game.id,
 						},
 						data: {
-							userIds: {}
-						}
+							userIds: {},
+						},
 					});
 					const users = await this.gameService.getUsers(game);
 					this.server.to(hash).emit('newUser', users);
@@ -141,11 +150,11 @@ export class GameUtilsGateway {
 						},
 						data: {
 							stat: stat.ONLINE,
-						}
+						},
 					});
 				}
 			} else {
-					console.log('Game not found');
+				console.log('Game not found');
 			}
 		} else {
 			console.log('user not found');

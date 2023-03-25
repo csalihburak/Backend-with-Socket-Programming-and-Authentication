@@ -5,6 +5,8 @@ import { CorsMiddleware } from '@nest-middlewares/cors';
 import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { chatGateAWay } from './chat/chat.gateway';
+import { chatService } from './chat/chat.service';
 
 @Module({
 	imports: [
@@ -17,6 +19,7 @@ import { join } from 'path';
 			exclude: ['/api*'],
 		}),
 	],
+	providers: [chatGateAWay, chatService]
 })
 export class AppModule {
 	configure(consumer: any) {

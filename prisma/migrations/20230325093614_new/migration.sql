@@ -1,9 +1,6 @@
 -- CreateEnum
 CREATE TYPE "stat" AS ENUM ('ONLINE', 'OFFLINE', 'IN_GAME', 'BUSY');
 
--- CreateEnum
-CREATE TYPE "achievements" AS ENUM ('First_Win', 'Pong_Pro', 'Perfect_Game', 'Streak_Master', 'Social_Butterfly');
-
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
@@ -19,7 +16,8 @@ CREATE TABLE "users" (
     "won" INTEGER NOT NULL DEFAULT 0,
     "lost" INTEGER NOT NULL DEFAULT 0,
     "row" INTEGER NOT NULL DEFAULT 0,
-    "achievements" "achievements"[],
+    "achievements" TEXT[],
+    "friends" INTEGER[],
     "point" INTEGER NOT NULL,
     "coalition" TEXT NOT NULL,
 

@@ -26,23 +26,24 @@ enum stat {
 //
 
 model User {
-  id              Int            @id @default(autoincrement())
-  username        String         @unique
+  id              Int      @id @default(autoincrement())
+  username        String   @unique
   pass            String
-  email           String         @unique
+  email           String   @unique
   fullName        String
   pictureUrl      String
-  createdAt       DateTime       @default(now())
-  two_factor_auth Boolean        @default(false)
-  stat            stat           @default(OFFLINE)
-  played          Int            @default(0)
-  won             Int            @default(0)
-  lost            Int            @default(0)
-  row             Int            @default(0)
+  createdAt       DateTime @default(now())
   achievements    String[]
   friends         Int[]
-  point     Int
-  coalition String
+  blockedUsers    Int[]
+  point           Int
+  two_factor_auth Boolean  @default(false)
+  stat            stat     @default(OFFLINE)
+  played          Int      @default(0)
+  won             Int      @default(0)
+  lost            Int      @default(0)
+  row             Int      @default(0)
+  coalition       String
 
   @@map("users")
 }
@@ -92,4 +93,31 @@ model GameHistory {
   gameTime         DateTime @default(now())
 
   @@map("gameHistorys")
+}
+
+model messages {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  message    String
+  time       DateTime @default(now())
+}
+
+model chatRooms {
+  id          Int    @id @default(autoincrement())
+  roomName    String @unique()
+  ownerId     Int
+  userIds     Int[]
+  adminIds    Int[]
+  mutedUsers  Int[]
+  BannedUsers Int[]
+  password    String @default("")
+}
+
+model chatRoomMessages {
+  id       Int      @id @default(autoincrement())
+  roomId   Int
+  senderId Int
+  message  String
+  time     DateTime @default(now())
 }
