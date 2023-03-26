@@ -10,15 +10,16 @@ CREATE TABLE "users" (
     "fullName" TEXT NOT NULL,
     "pictureUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "achievements" TEXT[],
+    "friends" INTEGER[],
+    "blockedUsers" INTEGER[],
+    "point" INTEGER NOT NULL,
     "two_factor_auth" BOOLEAN NOT NULL DEFAULT false,
     "stat" "stat" NOT NULL DEFAULT 'OFFLINE',
     "played" INTEGER NOT NULL DEFAULT 0,
     "won" INTEGER NOT NULL DEFAULT 0,
     "lost" INTEGER NOT NULL DEFAULT 0,
     "row" INTEGER NOT NULL DEFAULT 0,
-    "achievements" TEXT[],
-    "friends" INTEGER[],
-    "point" INTEGER NOT NULL,
     "coalition" TEXT NOT NULL,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
@@ -75,6 +76,48 @@ CREATE TABLE "gameHistorys" (
     CONSTRAINT "gameHistorys_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "messages" (
+    "id" SERIAL NOT NULL,
+    "senderId" INTEGER NOT NULL,
+    "receiverId" INTEGER NOT NULL,
+    "message" TEXT NOT NULL,
+    "time" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "userMute" (
+    "userId" INTEGER NOT NULL,
+    "mutedTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "channelsId" INTEGER
+);
+
+-- CreateTable
+CREATE TABLE "channels" (
+    "id" SERIAL NOT NULL,
+    "channelName" TEXT NOT NULL,
+    "ownerId" INTEGER NOT NULL,
+    "userIds" INTEGER[],
+    "adminIds" INTEGER[],
+    "BannedUsers" INTEGER[],
+    "password" TEXT NOT NULL DEFAULT '',
+
+    CONSTRAINT "channels_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "channelMessages" (
+    "id" SERIAL NOT NULL,
+    "channelId" INTEGER NOT NULL,
+    "senderId" INTEGER NOT NULL,
+    "message" TEXT NOT NULL,
+    "time" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "channelMessages_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
@@ -86,3 +129,12 @@ CREATE UNIQUE INDEX "sessionTokens_token_key" ON "sessionTokens"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "games_hash_key" ON "games"("hash");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "userMute_userId_key" ON "userMute"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "channels_channelName_key" ON "channels"("channelName");
+
+-- AddForeignKey
+ALTER TABLE "userMute" ADD CONSTRAINT "userMute_channelsId_fkey" FOREIGN KEY ("channelsId") REFERENCES "channels"("id") ON DELETE SET NULL ON UPDATE CASCADE;

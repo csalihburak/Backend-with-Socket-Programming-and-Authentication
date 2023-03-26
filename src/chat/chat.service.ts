@@ -1,6 +1,6 @@
 import { PrismaService } from "src/prisma/prisma.service"
 import { Injectable } from "@nestjs/common";
-import { chatRooms, User } from "@prisma/client";
+import { channels, User } from "@prisma/client";
 import * as crypto from 'crypto';
 
 
@@ -66,10 +66,10 @@ export class chatService {
 		if (roomData.password.length > 0) {
 			roomData.password = crypto.createHash('sha256').update(roomData.password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
 		}
-		const room = await this.prisma.chatRooms.create({
+		const room = await this.prisma.channels.create({
 			data: {
 				ownerId: user.id,
-				roomName: roomData.roomName,
+				channelName: roomData.roomName,
 				password: roomData.password,
 				userIds: {set: user.id},
 				adminIds: {set: user.id},
@@ -89,10 +89,10 @@ export class chatService {
 		}
 	}
 
-	async getRoom(roomName: string) : Promise<chatRooms>{
-		const room = this.prisma.chatRooms.findUnique({
+	async getRoom(channelName: string) : Promise<channels>{
+		const room = this.prisma.channels.findUnique({
 			where: {
-				id: 1, //you have to change it
+				channelName: channelName,
 			}
 		});
 		if (room) {
@@ -103,7 +103,15 @@ export class chatService {
 		}
 	}
 
-	async isUserAllowed(userId: number, room: chatRooms): Promise<Boolean> { //check the user if banned or muted
+	async isUserAllowed(userId: number, channel: channels): Promise<number> {
+		if (channel.BannedUsers.includes(userId)) {
+			console.log(`user banned form this channel(${channel.channelName})`)
+			return 1;
+		} else if (channel.mutedUsers.includes(userId)) {
+			
+		} else {
+
+		}
 		
 		return
 	}

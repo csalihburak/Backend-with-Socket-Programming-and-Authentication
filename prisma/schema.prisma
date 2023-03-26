@@ -103,21 +103,28 @@ model messages {
   time       DateTime @default(now())
 }
 
-model chatRooms {
-  id          Int    @id @default(autoincrement())
-  roomName    String @unique()
+model userMute {
+  userId     Int       @unique()
+  mutedTime  DateTime  @default(now())
+  channels   channels? @relation(fields: [channelsId], references: [id])
+  channelsId Int?
+}
+
+model channels {
+  id          Int        @id @default(autoincrement())
+  channelName String     @unique()
   ownerId     Int
   userIds     Int[]
   adminIds    Int[]
-  mutedUsers  Int[]
+  mutedUsers  userMute[]
   BannedUsers Int[]
-  password    String @default("")
+  password    String     @default("")
 }
 
-model chatRoomMessages {
-  id       Int      @id @default(autoincrement())
-  roomId   Int
-  senderId Int
-  message  String
-  time     DateTime @default(now())
+model channelMessages {
+  id        Int      @id @default(autoincrement())
+  channelId Int
+  senderId  Int
+  message   String
+  time      DateTime @default(now())
 }

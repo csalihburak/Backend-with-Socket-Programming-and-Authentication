@@ -79,7 +79,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			if (room) {
 				if (room.userIds.includes(user.id)) {
 					
-				} else { // burada bir alert atabiliriz
+				} else { 
 					console.log('user not in the channel.');
 				}
 			}
