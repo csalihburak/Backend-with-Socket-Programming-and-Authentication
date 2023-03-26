@@ -89,9 +89,12 @@ CREATE TABLE "messages" (
 
 -- CreateTable
 CREATE TABLE "userMute" (
+    "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
     "mutedTime" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "channelsId" INTEGER
+    "channelsId" INTEGER,
+
+    CONSTRAINT "userMute_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -129,9 +132,6 @@ CREATE UNIQUE INDEX "sessionTokens_token_key" ON "sessionTokens"("token");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "games_hash_key" ON "games"("hash");
-
--- CreateIndex
-CREATE UNIQUE INDEX "userMute_userId_key" ON "userMute"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "channels_channelName_key" ON "channels"("channelName");

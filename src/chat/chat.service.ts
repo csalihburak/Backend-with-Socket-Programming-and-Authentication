@@ -3,6 +3,7 @@ import { channels, User, userMute } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
+import { Server, Socket } from "socket.io";
 
 
 @Injectable()
@@ -62,7 +63,7 @@ export class chatService {
 		return (message);
 	}
 
-	async createRooms(roomData: {roomName: string, password: string }, user: User) {
+	async createChannel(roomData: {roomName: string, password: string, priv: boolean }, user: User) : Promise<{channel: channels, error: any}> {
 		if (roomData.password.length > 0) {
 			roomData.password = crypto.createHash('sha256').update(roomData.password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
 		}
@@ -76,16 +77,43 @@ export class chatService {
 			}
 		}).catch(error => {
 			if (error.code === 'P2002') {
-				return JSON.stringify({ status: 403, message: `Room ${room.roomName} already exists.` });
+				return { channel: null, error: `Room ${room.roomName} already exists.` };
 			}
-			  return (error);
+			  return {channel: null, error: error};
 		});
 		if (room) {
 			room.password = null;
-			return (room);
+			return {channel: room, error: null};
 		} else {
 			console.log('Error creation of the room!');
-			return null;
+			return {channel: null, error: "Error creation of the room!"};
+		}
+	}
+
+	async joinChannel(userId: number, channelName: string, password: string) : Promise<{channel: channels, error: any}>{
+		const channel = await this.getChannel(channelName);
+		if (channel) {
+			if (!channel.userIds.includes(userId)) {
+				if (!channel.BannedUsers.includes(userId)) {
+					password = crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
+					(channel.password ? (password === channel.password ?  channel.userIds.push(userId) : "") : "");
+					const updatedChannel = await this.prisma.channels.update({
+						where: {
+							id: channel.id,
+						},
+						data: {
+							userIds: { set: channel.userIds},
+						}
+					});
+					return { channel: updatedChannel, error: channel.password ? (password === channel.password ?  null : "Channel password is wrong!") : null };
+				} else {
+					return {channel: null, error: `User banned from this channel: ${channelName}`};
+				}
+			} else {
+				return {channel: null, error: `User already on the channel: ${channelName}`};
+			}
+		} else {
+			return {channel: null, error: `No such a channel: ${channelName}`};
 		}
 	}
 
@@ -121,6 +149,38 @@ export class chatService {
 			return (3);
 		} else {
 			return (0);
+		}
+	}
+
+	async getTime(userId: number, channle: channels) {
+		const mutedTime = await this.prisma.userMute.findFirst({
+			where: {
+				userId,
+				channelsId: channle.id,
+			},
+		});
+		if (mutedTime) {
+			const date = new Date(mutedTime.mutedTime);
+			return(date.toLocaleString());
+		} else {
+			console.log('error while getting getTime');
+			return -1;
+		}
+	}
+
+	async sendMessage(server: Server, client: Socket, channel: channels, message: any, user: any) {
+		if (message.type === 1) {
+			if (message.data.message) {
+				server.to(channel.channelName).emit('channelCommand',{ sender: user, message: message.data.message });
+			} else {
+				client.emit('alert', message.data.error);
+			}							
+		} else {
+			if (message.data.message) {
+				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message});
+			} else { // could be a bug
+				client.emit('alert', message.data.error);
+			}
 		}
 	}
 
@@ -174,6 +234,14 @@ export class chatService {
 								userId: user.id,
 								channels: {connect: { id: channel.id }},
 								mutedTime: mutedTime,
+							}
+						});
+						const updatedChannel = await this.prisma.channels.update({
+							where: {
+								id: channel.id,
+							},
+							data: {
+								mutedUsers: {connect: { id: userMute.id }}
 							}
 						});
 						return {message: `User: ${user.username} muted for ${minutes} minut.`, error: null};
@@ -269,6 +337,7 @@ export class chatService {
 	}
 
 
+
 	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
 		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
 			return {message: null, error: 'You are not authorized to use this command.'};
@@ -287,15 +356,15 @@ export class chatService {
 			case '/pass':
 				return await this.channelPass(senderId, commands[1], channel);
 			case '/mode':
-				return;
+				return await this.userMode(senderId, commands[1], channel);
 			default:
 				return {message: null, error: 'Unknown command.'};
 		}
 	}
 
-	async parseMessage(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
+	async parseMessage(senderId: number, message: string, channel: channels ) : Promise<{type: number, data: {message: string, error: string} }> {
 		if (message[0] === '/') {
-			return await this.commandParse(senderId, message, channel);
+			return {type: 1, data: await this.commandParse(senderId, message, channel)};
 		} else {
 			const encryptedMessage = cryptojs.AES.encrypt(message, process.env.SECRET_KEY).toString();
 			let channelMessage = await this.prisma.channelMessages.create({
@@ -305,7 +374,7 @@ export class chatService {
 					message: encryptedMessage,
 				}
 			});
-			return {message: message, error: null};
+			return {type : 0 , data: { message: message, error: null } };
 		}
 	}
 }

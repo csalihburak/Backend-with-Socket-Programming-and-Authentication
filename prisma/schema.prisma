@@ -104,8 +104,8 @@ model messages {
 }
 
 model userMute {
-  id         Int      @id @default(autoincrement())
-  userId     Int      
+  id         Int       @id @default(autoincrement())
+  userId     Int
   mutedTime  DateTime  @default(now())
   channels   channels? @relation(fields: [channelsId], references: [id])
   channelsId Int?
@@ -119,6 +119,7 @@ model channels {
   adminIds    Int[]
   mutedUsers  userMute[]
   BannedUsers Int[]
+  public      Boolean    @default(false)
   password    String     @default("")
 }
 
