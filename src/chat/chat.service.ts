@@ -1,6 +1,7 @@
-import { PrismaService } from "src/prisma/prisma.service"
+import { PrismaService } from "src/prisma/prisma.service";
+import { channels, User, userMute } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
-import { channels, User } from "@prisma/client";
+import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
 
 
@@ -40,7 +41,6 @@ export class chatService {
 			where: {
 				username: username,
 			}
-
 		});
 		if (receiver) {
 			if(receiver.blockedUsers.includes(sender.id)) { //user has been blocked by receiver
@@ -89,7 +89,7 @@ export class chatService {
 		}
 	}
 
-	async getRoom(channelName: string) : Promise<channels>{
+	async getChannel(channelName: string) : Promise<channels>{
 		const room = this.prisma.channels.findUnique({
 			where: {
 				channelName: channelName,
@@ -104,19 +104,208 @@ export class chatService {
 	}
 
 	async isUserAllowed(userId: number, channel: channels): Promise<number> {
-		if (channel.BannedUsers.includes(userId)) {
-			console.log(`user banned form this channel(${channel.channelName})`)
-			return 1;
-		} else if (channel.mutedUsers.includes(userId)) {
-			
+		const userMuted = await this.prisma.userMute.findFirst({
+			where: {
+				userId: userId,
+				channelsId: channel.id,
+			}
+		});
+		if (channel.userIds.includes(userId)) {
+			console.log('user not in the channel.');
+			return (1);
+		} else if (userMuted) {
+			console.log(`user muted for ${ userMuted.mutedTime.getTime() - Date.now()} in this channel(${channel.channelName})`);
+			return (2);
+		} else if (channel.BannedUsers.includes(userId)) {
+			console.log(`user banned from this channel(${channel.channelName})`)
+			return (3);
 		} else {
-
+			return (0);
 		}
-		
-		return
 	}
 
-	async parseMessage(message: string) {
+	async banUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
+		const user = await this.prisma.user.findUnique({
+			where: {
+				username,
+			}
+		});
+		if(user) {
+			if (channel.userIds.includes(user.id)) {
+				if (channel.ownerId !== user.id) {
+					channel.userIds.splice(channel.userIds.indexOf(user.id));
+					channel.BannedUsers.push(user.id);
+					const updateChannel = await this.prisma.channels.update({
+						where: {
+							id: channel.id,
+						},
+						data: {
+							userIds: {set: channel.userIds},
+							BannedUsers: {set: channel.BannedUsers}
+						}
+					});
+					return {message : `User: ${username} has banned by: `, error: null };
+				} else {
+					return {message : null, error: 'Admins can not \'ban\' the owner of the channel!'};
+				}
+			} else {
+				return {message : null, error :`User: ${username} not in the channel!`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${username}`};
+		}
+	}
 
+	async muteUser(username: any,  time: any,  channel: channels) : Promise<{message: string, error: string }> {
+		const user = await this.prisma.user.findUnique({
+			where: {
+				username,
+			}
+		});
+		if(user) {
+			if (channel.userIds.includes(user.id)) {
+				if (channel.ownerId !== user.id) {
+					let minutes = parseInt(time);
+					if ( [15, 30, 60].includes(minutes)) {
+						const mutedTime = new Date();
+						mutedTime.setMinutes(mutedTime.getMinutes() + minutes);
+						const userMute = await this.prisma.userMute.create({
+							data: {
+								userId: user.id,
+								channels: {connect: { id: channel.id }},
+								mutedTime: mutedTime,
+							}
+						});
+						return {message: `User: ${user.username} muted for ${minutes} minut.`, error: null};
+					} else {
+						return {message: null, error: `Invalid mute time (${minutes}) please provide valid one!`};
+					}
+				} else {
+					return {message : null, error: 'Admins can not \'mute\' the owner of the channel!'};
+				}
+			} else {
+				return {message : null, error :`User: ${username} not in the channel!`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${username}`};
+		}
+	}
+
+	async kickUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
+		const user = await this.prisma.user.findUnique({
+			where: {
+				username,
+			}
+		});
+		if(user) {
+			if (channel.userIds.includes(user.id)) {
+				if (channel.ownerId !== user.id) {
+					channel.userIds.splice(channel.userIds.indexOf(user.id));
+					const updateChannel = await this.prisma.channels.update({
+						where: {
+							id: channel.id,
+						},
+						data: {
+							userIds: {set: channel.userIds},
+						}
+					});
+					return {message : `User: ${username} has kicked by: `, error: null };
+				} else {
+					return {message : null, error: 'Admins can not \'kick\' the owner of the channel!'};
+				}
+			} else {
+				return {message : null, error :`User: ${username} not in the channel!`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${username}`};
+		}
+	}
+
+	async channelPass( senderId: number, password: string, channel: channels ) : Promise<{message: string, error: string }> {
+	
+		if (senderId !== channel.ownerId) {
+			return {message: null, error: 'Only the channel owner can set the channel password'};
+		}
+		password =  crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
+		const updatedChannel = await this.prisma.channels.update({
+			where: {
+				id: channel.id,
+			},
+			data: {
+				password,
+			}
+		});
+		return {message: `Channel (${channel.channelName}) updated!`, error: null}
+	}
+
+	async userMode(senderId: number, username: string, channel: channels) : Promise<{message: string, error: string }> {
+		if (senderId !== channel.ownerId) {
+			return {message: null, error: 'Only the channel owner can set the channel password'};
+		}
+		const user = await this.prisma.user.findUnique({
+			where: {
+				username,
+			}
+		});
+		if(user) {
+			if (channel.userIds.includes(user.id)) {
+				channel.adminIds.push(user.id);
+				const updateChannel = await this.prisma.channels.update({
+					where: {
+						id: channel.id,
+					},
+					data: {
+						adminIds: { set: channel.userIds },
+					}
+				});
+				return {message : `User: ${username} has now one of the channel admins!`, error: null };
+			} else {
+				return {message : null, error :`User: ${username} not in the channel!`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${username}`};
+		}
+
+	}
+
+
+	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
+		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
+			return {message: null, error: 'You are not authorized to use this command.'};
+		}
+		let commands = message.split(' ');
+		if (commands[1].length <= 1) {
+			return {message: null, error: 'Invalid command syntax.'};
+		}
+		switch (commands[0]) {
+			case '/kick':
+				return await this.kickUser(commands[1], channel);
+			case '/ban':
+				return await this.banUser(commands[1], channel);
+			case '/mute':
+				return await this.muteUser(commands[1], commands[2], channel);
+			case '/pass':
+				return await this.channelPass(senderId, commands[1], channel);
+			case '/mode':
+				return;
+			default:
+				return {message: null, error: 'Unknown command.'};
+		}
+	}
+
+	async parseMessage(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
+		if (message[0] === '/') {
+			return await this.commandParse(senderId, message, channel);
+		} else {
+			const encryptedMessage = cryptojs.AES.encrypt(message, process.env.SECRET_KEY).toString();
+			let channelMessage = await this.prisma.channelMessages.create({
+				data: {
+					channelId: channel.id,
+					senderId: senderId,
+					message: encryptedMessage,
+				}
+			});
+			return {message: message, error: null};
+		}
 	}
 }

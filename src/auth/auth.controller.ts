@@ -4,8 +4,8 @@ import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
 import { getSession } from './utils';
 import { diskStorage } from 'multer';
+import * as crypto from 'crypto-js';
 import { extname } from 'path';
-import * as sharp from 'sharp';
 import * as Jimp from 'jimp';
 
 @Controller('auth')
@@ -117,4 +117,15 @@ export class AuthController {
 		});
 		res.end();
 	}
+
+/* 	@Get('test')
+	async test() {
+		const message = 'This is a secret message';
+		const key = process.env.SECRET_KEY;
+		
+		const encryptedMessage = crypto.AES.encrypt(message, key).toString();
+		console.log(encryptedMessage);
+		const decryptedMessage = crypto.AES.decrypt(encryptedMessage, key).toString(crypto.enc.Utf8);
+		console.log(decryptedMessage);
+	} */
 }

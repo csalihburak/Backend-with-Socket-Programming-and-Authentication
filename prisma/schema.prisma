@@ -104,7 +104,8 @@ model messages {
 }
 
 model userMute {
-  userId     Int       @unique()
+  id         Int      @id @default(autoincrement())
+  userId     Int      
   mutedTime  DateTime  @default(now())
   channels   channels? @relation(fields: [channelsId], references: [id])
   channelsId Int?

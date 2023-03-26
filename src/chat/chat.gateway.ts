@@ -72,15 +72,26 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	}
 
 	@SubscribeMessage('messageToRoom')
-	async messageToRoom(client: Socket, message: any) {
+	async messageToRoom(client: Socket, messageData: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const room = await this.chatService.getRoom(message.roomName);
-			if (room) {
-				if (room.userIds.includes(user.id)) {
-					
-				} else { 
-					console.log('user not in the channel.');
+			const channel = await this.chatService.getChannel(messageData.roomName);
+			if (channel) {
+				switch (await this.chatService.isUserAllowed(user.id, channel)) {
+					case 0 :
+						const message = await this.chatService.parseMessage(user.id, messageData.messageTxt, channel);
+						break;
+					case 1 : 
+						// and here we can say that user not on the channel with emit subscription
+						break;
+					case 2 :
+						// burada user'a bir emit işlemi gerçekleştirerek kullanıcının mutedlandığını söyleyeceğiz
+						break;
+					case 3 :
+						// burada user'a bir emit işlemi gerçekleştirerek kullanıcının banlandığını söyleyeceğiz
+						break;
+					default :
+						return;
 				}
 			}
 		} else {
