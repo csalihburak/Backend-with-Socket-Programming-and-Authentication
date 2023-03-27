@@ -59,12 +59,15 @@ export class GameService {
 		return pictures;
 	}
 
-	async createGameWoptions(game: Game, userId: string): Promise<gameStruct> {
+	async createGameWoptions(game: Game, userId: string, user: User): Promise<gameStruct> {
 		const newGame = new gameStruct();
+		newGame.status = 1;
 		newGame.map = game.map;
 		newGame.round = game.round;
-		newGame.leftPlayer.id = userId;
 		newGame.name = game.gameId;
+		newGame.leftPlayerId = user.id;
+		newGame.leftPlayer.id = userId;
+		newGame.leftPlayer.name = user.username;
 		return newGame;
 	}
 
@@ -156,7 +159,7 @@ export class GameService {
 			});
 		if (user) {
 			let data = {
-				win: user.won,
+				won: user.won,
 				lost: user.lost,
 				row: user.row,
 				point: user.point,
@@ -164,7 +167,7 @@ export class GameService {
 				stat: stat.ONLINE,
 			};
 			if (won) {
-				data.win = user.won + 1;
+				data.won = user.won + 1;
 				data.point = user.point + 3;
 				data.row = user.row + 1;
 				if (user.played === 1) {
@@ -178,19 +181,19 @@ export class GameService {
 				data.lost = user.lost + 1;
 				data.row = 0;
 			}
-			const updatedUser = await this.prisma.user
-				.update({
+			const updatedUser = await this.prisma.user.update({
 					where: { id: user.id },
 					data,
 				})
 				.catch((error) => {
 					console.log(error);
-				});
+			});
 		}
 	}
 
 	async addGameHistory(game: gameStruct, user: User) {
 		const ach = user.achievements;
+		console.log(game.leftPlayerId);
 		const history = await this.prisma.gameHistory.create({
 			data: {
 				leftPlayerId: game.leftPlayerId,

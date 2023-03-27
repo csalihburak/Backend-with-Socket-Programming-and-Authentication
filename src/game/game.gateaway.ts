@@ -34,10 +34,11 @@ export class GameGateaway {
 					this.users[client.id] = user;
 					client.join(gameHash);
 					if (user.id == game.leftPlayerId) {
-						const newGame = await this.gameService.createGameWoptions( game,  client.id);
+						const newGame = await this.gameService.createGameWoptions( game, client.id, user);
 						if (newGame) {
 							newGame.status = 1;
 							newGame.leftPlayer.name = user.username;
+							newGame.leftPlayerId = user.id;
 							this.games[gameHash] = newGame;
 							client.emit('initalize', newGame);
 							server.to(gameHash).emit('newUser', users);
@@ -134,8 +135,8 @@ export class GameGateaway {
 		if (user) {
 			let game = this.games[data[0]];
 			if (game && game.status == 1) {
-				if (!(this.updateGame(game, data, server))) {
-					this.gameService.addGameHistory(game, user);
+				if (!(await this.updateGame(game, data, server))) {
+					await this.gameService.addGameHistory(game, user);
 				}
 			} else {
 				client.emit('playerLeft', ['Game is ended']);

@@ -27,7 +27,7 @@ export class GameUtilsGateway
 		if (user) {
 			this.users[client.id] = user;
 			client.emit('updateGames', this.games);
-			console.log(`client connected: ${user.username}`);
+			console.log(`client connected on gameGateway: ${user.username}`);
 		} else {
 			console.log('Error! user not found on connection');
 		}

@@ -1,9 +1,19 @@
 import { PrismaService } from "src/prisma/prisma.service";
 import { channels, User, userMute } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
+import { Server, Socket } from "socket.io";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
-import { Server, Socket } from "socket.io";
+
+
+
+interface messageStruct {
+	id: number,
+	sender: string,
+	receiver: string,
+	message: string,
+	time: any,
+};
 
 
 @Injectable()
@@ -44,7 +54,7 @@ export class chatService {
 			}
 		});
 		if (receiver) {
-			if(receiver.blockedUsers.includes(sender.id)) { //user has been blocked by receiver
+			if(receiver.blockedUsers.includes(sender.id)) {
 				return {receiver: null, error: `user has been blocked by: ${receiver.username}`};
 			}
 			return {receiver: receiver, error: null};
@@ -53,14 +63,91 @@ export class chatService {
 	}
 
 	async addMessageTodb(messageData: {sender: number, receiver: number, message: string}) {
+		const encryptedMessage = cryptojs.AES.encrypt(messageData.message, process.env.SECRET_KEY).toString();
 		const message = await this.prisma.messages.create({
 			data: {
 				senderId: messageData.sender,
 				receiverId: messageData.receiver,
-				message: messageData.message,
+				message: encryptedMessage,
 			}
 		});
 		return (message);
+	}
+
+	async getUsers(userId: number) {
+		const users = await this.prisma.user.findMany({
+			where: {
+				NOT: {
+					id: userId,
+				}
+			},
+			select: {
+				id: true,
+				stat: true,
+				username: true,
+				pictureUrl: true,
+			}
+		});
+		if (users)
+			return users;
+		return null;
+	}
+
+	async getFriends(user: User): Promise<{channels: any[], friends: any[]}> {
+		const friends = await this.prisma.user.findMany({
+			where: {
+				id: {in: user.friends},
+			},
+			select: {
+				id: true,
+				stat: true,
+				pictureUrl: true,
+			}
+		}).catch(error => {
+			console.log(error);
+			console.log('Database error on getting friends');
+		});
+		const channels = await this.prisma.channels.findMany({
+			where: {
+				userIds: { has: user.id },
+			}
+		});
+		if (friends && channels) {
+			return {channels: channels, friends: friends };
+		} else {
+			console.log('error on getting friends');
+			return null;
+		}
+	}
+
+	async getMessages(user: User, username: string) {
+		const friend = await this.prisma.user.findUnique({
+			where: {
+				username,
+			}
+		});
+		if (friend) {
+			if (user.friends.includes(friend.id)) {
+				let msg : messageStruct[] = [];
+				const messages = await this.prisma.messages.findMany({
+					where: {
+						senderId: user.id,
+						receiverId: friend.id,
+					},
+				});
+				messages.forEach((message, index)  => {
+					msg[index].message = cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8);
+					msg[index].sender = user.id === message.senderId ? user.username : username;
+					msg[index].receiver = user.id === message.receiverId ? user.username : username;
+					msg[index].time = message.time;
+				});
+				return { messages: msg, error: null };
+			} else {
+			return { messages: null, error : `User: ${username} is not your friend.` };
+			}
+		} else {
+			return { messages: null, error : `No such a user: ${username}` };
+		}
 	}
 
 	async createChannel(roomData: {roomName: string, password: string, priv: boolean }, user: User) : Promise<{channel: channels, error: any}> {
@@ -74,6 +161,7 @@ export class chatService {
 				password: roomData.password,
 				userIds: {set: user.id},
 				adminIds: {set: user.id},
+				public: roomData.priv,
 			}
 		}).catch(error => {
 			if (error.code === 'P2002') {
@@ -95,17 +183,18 @@ export class chatService {
 		if (channel) {
 			if (!channel.userIds.includes(userId)) {
 				if (!channel.BannedUsers.includes(userId)) {
-					password = crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
-					(channel.password ? (password === channel.password ?  channel.userIds.push(userId) : "") : "");
-					const updatedChannel = await this.prisma.channels.update({
-						where: {
-							id: channel.id,
-						},
-						data: {
-							userIds: { set: channel.userIds},
+					if (channel.password.length > 0) {
+						password = crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
+						if (password !== channel.password) {
+						  return { channel: null, error: 'Channel password is wrong!' };
 						}
+					}
+					channel.userIds.push(userId);
+					const updatedChannel = await this.prisma.channels.update({
+						where: { id: channel.id },
+						data: { userIds: { set: channel.userIds} }
 					});
-					return { channel: updatedChannel, error: channel.password ? (password === channel.password ?  null : "Channel password is wrong!") : null };
+					return { channel: updatedChannel, error: null };
 				} else {
 					return {channel: null, error: `User banned from this channel: ${channelName}`};
 				}

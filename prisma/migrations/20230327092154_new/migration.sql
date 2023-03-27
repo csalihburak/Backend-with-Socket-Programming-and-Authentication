@@ -105,6 +105,7 @@ CREATE TABLE "channels" (
     "userIds" INTEGER[],
     "adminIds" INTEGER[],
     "BannedUsers" INTEGER[],
+    "public" BOOLEAN NOT NULL DEFAULT true,
     "password" TEXT NOT NULL DEFAULT '',
 
     CONSTRAINT "channels_pkey" PRIMARY KEY ("id")

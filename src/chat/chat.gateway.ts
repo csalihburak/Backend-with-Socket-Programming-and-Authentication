@@ -41,6 +41,45 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
+	@SubscribeMessage('userList')
+	async getUsers(client: Socket, data: any) {
+
+		const user = this.users[client.id];
+		if (user) {
+			const users = await this.chatService.getUsers(user.id);
+			client.emit('userList', users);
+		} else {
+			console.log('error on userList');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('friendList')
+	async getFriends(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.getFriends(user);
+			client.emit('friendList', { channels: result.channels, friends: result.friends });
+		} else {
+			console.log('error on friendList');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('messageList')
+	async getMessages(client: Socket, friend: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.getMessages(user, friend);
+			if (result.messages) {
+
+			}
+		} else {
+			console.log('error on messageList');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
 	@SubscribeMessage('privMessage')
 	async privMessage(client: Socket, messageData: message) {
 		const user = this.users[client.id];
@@ -54,6 +93,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on privmsg');
+			client.emit('alert', 'user not found please retry when the connection established!')
 		}
 	}
 
@@ -81,6 +121,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				const date = Date.now();
 				this.server.to(data.channelName).emit('userJioned', { message: `User: ${user.username} has joinned the channel`, time: date.toLocaleString()});
 			} else {
+				console.log(result);
 				client.emit('alert', result.error);
 			}
 		} else {
