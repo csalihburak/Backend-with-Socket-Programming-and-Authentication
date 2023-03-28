@@ -59,9 +59,46 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const result = await this.chatService.getFriends(user);
-			client.emit('friendList', { channels: result.channels, friends: result.friends });
+			if (result) {
+				client.emit('friendList', { channels: result.channels, friends: result.friends });
+			} else {
+				client.emit('alert', 'There is a error while getting the friendList');
+			}
 		} else {
 			console.log('error on friendList');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('addFriend')
+	async addFriend(client: Socket, friendName: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.addFriend(user.id, friendName); // burada friende bir istek atabiliriz
+			if (result.message) {
+				client.emit('alert', result.message);
+				this.server.to(friendName).emit('alert', `You have new friend request.`);
+			} else {
+				client.emit('alert', result.error);
+			}
+		} else {
+			console.log('error on addFriend');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+	
+	@SubscribeMessage('responseRequest')
+	async respondRequest(client: Socket, data: { friendName: string, accept: boolean}) {
+		const user = this.users[client.id];
+		if (user) {
+			const response = await this.chatService.respondRequest(user, data.friendName, data.accept);
+			if (response.message) {
+				client.emit('resposeRequest', response.message);
+			} else {
+				client.emit('alert', response.error);
+			}
+		} else {
+			console.log('error on repondRequest');
 			client.emit('alert', 'user not found please retry when the connection established!')
 		}
 	}
@@ -70,9 +107,12 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async getMessages(client: Socket, friend: string) {
 		const user = this.users[client.id];
 		if (user) {
+			console.log('test');
 			const result = await this.chatService.getMessages(user, friend);
 			if (result.messages) {
-
+				return result.messages;
+			} else {
+				client.emit('alert', result.error);
 			}
 		} else {
 			console.log('error on messageList');
@@ -80,14 +120,15 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	@SubscribeMessage('privMessage')
+	@SubscribeMessage('privMessage') // revize lazım
 	async privMessage(client: Socket, messageData: message) {
 		const user = this.users[client.id];
 		if (user) {
 			const {receiver, error } = await this.chatService.getReceiver(user, messageData.receiver);
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
-				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
+				// client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
+				client.emit('privMessage', { id: message.id, senderId: user.id, receiverId: receiver.id, message: messageData.messageTxt, time: message.time });
 			} else {
 				console.log(error);
 			}

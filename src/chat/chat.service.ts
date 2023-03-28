@@ -102,6 +102,7 @@ export class chatService {
 				id: true,
 				stat: true,
 				pictureUrl: true,
+				username: true,
 			}
 		}).catch(error => {
 			console.log(error);
@@ -128,20 +129,20 @@ export class chatService {
 		});
 		if (friend) {
 			if (user.friends.includes(friend.id)) {
-				let msg : messageStruct[] = [];
 				const messages = await this.prisma.messages.findMany({
 					where: {
 						senderId: user.id,
 						receiverId: friend.id,
 					},
 				});
-				messages.forEach((message, index)  => {
-					msg[index].message = cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8);
-					msg[index].sender = user.id === message.senderId ? user.username : username;
-					msg[index].receiver = user.id === message.receiverId ? user.username : username;
-					msg[index].time = message.time;
+				const msg : messageStruct[] = [];
+ 				messages.forEach((message, index)  => {
+					message.message = cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8); // revize atılacak
+/* 					message.senderId = user.id;
+					message.receiverId,
+					msg[index].time = message.time; */
 				});
-				return { messages: msg, error: null };
+				return { messages: messages, error: null };
 			} else {
 			return { messages: null, error : `User: ${username} is not your friend.` };
 			}
@@ -267,9 +268,107 @@ export class chatService {
 		} else {
 			if (message.data.message) {
 				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message});
-			} else { // could be a bug
+			} else {
 				client.emit('alert', message.data.error);
 			}
+		}
+	}
+
+	async addFriend(userId: number, friendName: string) : Promise<{message: string, error: any}> {
+		const friend = await this.prisma.user.findUnique({
+			where: {
+				username: friendName,
+			}
+		});
+		if (friend) {
+			if (!friend.friends.includes(userId)) {
+				if (!friend.blockedUsers.includes(userId)) {
+					const friendRequest = await this.prisma.friendRequest.create({
+						data: {
+							senderId: userId,
+							receiverId: friend.id,
+						},
+					}).catch(error => {
+						if (error.code === 'P2002') {
+							return { message: null, error: `Friend request already been sent!` };
+						} else {
+							return { message: null, error: error };
+						}
+					});
+					return {message: `Friend request has been sent to ${friend.username}`, error : null};
+				} else {
+					return {message: null, error : `User: ${friend} has blocked you.`};
+				}
+			} else {
+				return {message: null, error : `User: ${friend} already your friend.`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${friend}`};
+		}
+	}
+
+	async respondRequest(user: User, friendName: string, accept: boolean) {
+		const friend = await this.prisma.user.findUnique({
+			where: {
+				username: friendName,
+			}
+		});
+		if (friend) {
+			const request = await this.prisma.friendRequest.findFirst({
+				where: {
+					senderId: friend.id,
+					receiverId: user.id,
+				}
+			});
+			if (request) {
+				if (accept === true) {
+					const userUpdated = await this.prisma.user.update({
+						where: {
+							id: user.id,
+						},
+						data: {
+							friends: {push: user.id},
+						}
+					});
+					const friendUpdate = await this.prisma.user.update({
+						where: {
+							id: friend.id,
+						},
+						data: {
+							friends: {push: friend.id},
+						}
+					});
+/* 					const updated = await this.prisma.user.updateMany({
+						where: {
+							OR: [
+								{ id: user.id },
+								{ id: friend.id },
+							],
+						},
+						data: [
+							{
+								id: user.id,
+								friends: {
+									push: friend.id,
+								},
+							},
+							{
+								id: friend.id,
+								friends: {
+									push: user.id,
+								},
+							},
+						],
+					}); */
+					return {message: `User: ${friend.username} has been accepted your friend request.`, error: null};
+				} else {
+					return {message: `User: ${friend.username} has rejected your friend request.`, error: null};
+				}
+			} else {
+				return {message: null, error : `No such a request`};
+			}
+		} else {
+			return {message: null, error : `No such a user: ${friend}`};
 		}
 	}
 
@@ -379,7 +478,6 @@ export class chatService {
 	}
 
 	async channelPass( senderId: number, password: string, channel: channels ) : Promise<{message: string, error: string }> {
-	
 		if (senderId !== channel.ownerId) {
 			return {message: null, error: 'Only the channel owner can set the channel password'};
 		}
