@@ -4,8 +4,7 @@ import { Injectable } from "@nestjs/common";
 import { Server, Socket } from "socket.io";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
-
-
+import * as utils from './channel.commands';
 
 interface messageStruct {
 	id: number,
@@ -131,18 +130,27 @@ export class chatService {
 			if (user.friends.includes(friend.id)) {
 				const messages = await this.prisma.messages.findMany({
 					where: {
-						senderId: user.id,
-						receiverId: friend.id,
+						OR: [
+							{ senderId: user.id, receiverId: friend.id },
+							{ senderId: friend.id, receiverId: user.id }
+						]
 					},
+					orderBy: {
+						time: 'asc',
+					}
 				});
-				const msg : messageStruct[] = [];
+				const msg : any[] = [];
  				messages.forEach((message, index)  => {
-					message.message = cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8); // revize atılacak
-/* 					message.senderId = user.id;
-					message.receiverId,
-					msg[index].time = message.time; */
+					let data : messageStruct = {
+						id: index,
+						message: cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8),
+ 						sender: user.id === message.senderId ? user.username : username,
+						receiver: user.id === message.receiverId ? user.username : username,
+						time: message.time,
+					}
+					msg.push(data);
 				});
-				return { messages: messages, error: null };
+				return { messages: msg, error: null };
 			} else {
 			return { messages: null, error : `User: ${username} is not your friend.` };
 			}
@@ -338,28 +346,6 @@ export class chatService {
 							friends: {push: friend.id},
 						}
 					});
-/* 					const updated = await this.prisma.user.updateMany({
-						where: {
-							OR: [
-								{ id: user.id },
-								{ id: friend.id },
-							],
-						},
-						data: [
-							{
-								id: user.id,
-								friends: {
-									push: friend.id,
-								},
-							},
-							{
-								id: friend.id,
-								friends: {
-									push: user.id,
-								},
-							},
-						],
-					}); */
 					return {message: `User: ${friend.username} has been accepted your friend request.`, error: null};
 				} else {
 					return {message: `User: ${friend.username} has rejected your friend request.`, error: null};
@@ -373,154 +359,23 @@ export class chatService {
 	}
 
 	async banUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
-		const user = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if(user) {
-			if (channel.userIds.includes(user.id)) {
-				if (channel.ownerId !== user.id) {
-					channel.userIds.splice(channel.userIds.indexOf(user.id));
-					channel.BannedUsers.push(user.id);
-					const updateChannel = await this.prisma.channels.update({
-						where: {
-							id: channel.id,
-						},
-						data: {
-							userIds: {set: channel.userIds},
-							BannedUsers: {set: channel.BannedUsers}
-						}
-					});
-					return {message : `User: ${username} has banned by: `, error: null };
-				} else {
-					return {message : null, error: 'Admins can not \'ban\' the owner of the channel!'};
-				}
-			} else {
-				return {message : null, error :`User: ${username} not in the channel!`};
-			}
-		} else {
-			return {message: null, error : `No such a user: ${username}`};
-		}
+		return await utils.banUser(username, channel, this.prisma);
 	}
 
 	async muteUser(username: any,  time: any,  channel: channels) : Promise<{message: string, error: string }> {
-		const user = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if(user) {
-			if (channel.userIds.includes(user.id)) {
-				if (channel.ownerId !== user.id) {
-					let minutes = parseInt(time);
-					if ( [15, 30, 60].includes(minutes)) {
-						const mutedTime = new Date();
-						mutedTime.setMinutes(mutedTime.getMinutes() + minutes);
-						const userMute = await this.prisma.userMute.create({
-							data: {
-								userId: user.id,
-								channels: {connect: { id: channel.id }},
-								mutedTime: mutedTime,
-							}
-						});
-						const updatedChannel = await this.prisma.channels.update({
-							where: {
-								id: channel.id,
-							},
-							data: {
-								mutedUsers: {connect: { id: userMute.id }}
-							}
-						});
-						return {message: `User: ${user.username} muted for ${minutes} minut.`, error: null};
-					} else {
-						return {message: null, error: `Invalid mute time (${minutes}) please provide valid one!`};
-					}
-				} else {
-					return {message : null, error: 'Admins can not \'mute\' the owner of the channel!'};
-				}
-			} else {
-				return {message : null, error :`User: ${username} not in the channel!`};
-			}
-		} else {
-			return {message: null, error : `No such a user: ${username}`};
-		}
+		return await utils.muteUser(username, time, channel, this.prisma)
 	}
 
 	async kickUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
-		const user = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if(user) {
-			if (channel.userIds.includes(user.id)) {
-				if (channel.ownerId !== user.id) {
-					channel.userIds.splice(channel.userIds.indexOf(user.id));
-					const updateChannel = await this.prisma.channels.update({
-						where: {
-							id: channel.id,
-						},
-						data: {
-							userIds: {set: channel.userIds},
-						}
-					});
-					return {message : `User: ${username} has kicked by: `, error: null };
-				} else {
-					return {message : null, error: 'Admins can not \'kick\' the owner of the channel!'};
-				}
-			} else {
-				return {message : null, error :`User: ${username} not in the channel!`};
-			}
-		} else {
-			return {message: null, error : `No such a user: ${username}`};
-		}
+		return await utils.kickUser(username, channel, this.prisma);
 	}
 
 	async channelPass( senderId: number, password: string, channel: channels ) : Promise<{message: string, error: string }> {
-		if (senderId !== channel.ownerId) {
-			return {message: null, error: 'Only the channel owner can set the channel password'};
-		}
-		password =  crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432/+").digest('hex');
-		const updatedChannel = await this.prisma.channels.update({
-			where: {
-				id: channel.id,
-			},
-			data: {
-				password,
-			}
-		});
-		return {message: `Channel (${channel.channelName}) updated!`, error: null}
+		return await utils.channelPass(senderId, password, channel, this.prisma);
 	}
 
 	async userMode(senderId: number, username: string, channel: channels) : Promise<{message: string, error: string }> {
-		if (senderId !== channel.ownerId) {
-			return {message: null, error: 'Only the channel owner can set the channel password'};
-		}
-		const user = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if(user) {
-			if (channel.userIds.includes(user.id)) {
-				channel.adminIds.push(user.id);
-				const updateChannel = await this.prisma.channels.update({
-					where: {
-						id: channel.id,
-					},
-					data: {
-						adminIds: { set: channel.userIds },
-					}
-				});
-				return {message : `User: ${username} has now one of the channel admins!`, error: null };
-			} else {
-				return {message : null, error :`User: ${username} not in the channel!`};
-			}
-		} else {
-			return {message: null, error : `No such a user: ${username}`};
-		}
-
+		return await utils.userMode(senderId, username, channel, this.prisma);
 	}
 
 
@@ -563,5 +418,28 @@ export class chatService {
 			});
 			return {type : 0 , data: { message: message, error: null } };
 		}
+	}
+
+	async createPost(user: User, postData: any) : Promise<{username: string, pictureUrl: string, content: string, time: Date }>{
+		const post = await this.prisma.posts.create({
+			data: {
+				content: postData,
+				userId: user.id,
+				likes: 0,
+			}
+		});
+		return {username: user.username, pictureUrl: user.pictureUrl, content: postData, time: post.time};
+	}
+
+	async gameHistory(userId: number) {
+		const games = await this.prisma.gameHistory.findMany({
+			where: {
+				OR: [
+					{ leftPlayerId: userId,},
+					{ rightPlayerId: userId}
+				],
+			},
+		});
+		return (games);
 	}
 }

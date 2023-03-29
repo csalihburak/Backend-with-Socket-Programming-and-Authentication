@@ -139,3 +139,11 @@ model channelMessages {
   message   String
   time      DateTime @default(now())
 }
+
+model posts {
+  id      Int      @id @default(autoincrement())
+  userId  Int
+  content String
+  likes   BigInt
+  time    DateTime @default(now())
+}

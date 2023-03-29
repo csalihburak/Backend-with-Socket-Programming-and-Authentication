@@ -120,15 +120,15 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	@SubscribeMessage('privMessage') // revize lazım
+	@SubscribeMessage('privMessage')
 	async privMessage(client: Socket, messageData: message) {
 		const user = this.users[client.id];
 		if (user) {
 			const {receiver, error } = await this.chatService.getReceiver(user, messageData.receiver);
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
-				// client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
-				client.emit('privMessage', { id: message.id, senderId: user.id, receiverId: receiver.id, message: messageData.messageTxt, time: message.time });
+				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
+				client.emit('privMessage', { id: message.id, sender: user.username, receiver: receiver.username, message: messageData.messageTxt, time: message.time });
 			} else {
 				console.log(error);
 			}
@@ -197,6 +197,44 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on messageToRoom.');
+			client.emit('alert', 'user not found please retry when the connection established!')
 		}
 	}
+
+	@SubscribeMessage('createPost')
+	async createPosts(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.createPost(user, data);
+			this.server.emit('newPost', result);
+		} else {
+			console.log('user not found on createPost');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('gameHistory')
+	async gameHistory(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const games = await this.chatService.gameHistory(user.id);
+			return (games);
+		} else {
+			console.log('user not found on gameHistory');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('achievements')
+	async achievements(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			return user.achievements;
+		} else {
+			console.log('user not found on achievements');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+
 }
