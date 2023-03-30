@@ -24,7 +24,6 @@ enum stat {
 // Streak_Master //"Awarded to players who win 5 consecutive games of Pong on our website"
 // Social_Butterfly //"Awarded to players who chat with 5 different player on our website."
 //
-
 model User {
   id              Int      @id @default(autoincrement())
   username        String   @unique
@@ -36,8 +35,9 @@ model User {
   achievements    String[]
   friends         Int[]
   blockedUsers    Int[]
-  point           Int
+  posts           posts[]  // new field
   two_factor_auth Boolean  @default(false)
+  point           Int
   stat            stat     @default(OFFLINE)
   played          Int      @default(0)
   won             Int      @default(0)
@@ -141,9 +141,13 @@ model channelMessages {
 }
 
 model posts {
-  id      Int      @id @default(autoincrement())
-  userId  Int
-  content String
-  likes   BigInt
-  time    DateTime @default(now())
+  id       Int      @id @default(autoincrement())
+  user     User?    @relation(fields: [userId], references: [id])
+  userId   Int?
+  content  String
+  likes    Int
+  retweets Int
+  time     DateTime @default(now())
+
+  @@map("posts")
 }

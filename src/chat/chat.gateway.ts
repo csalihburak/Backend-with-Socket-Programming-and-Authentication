@@ -201,18 +201,6 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	@SubscribeMessage('createPost')
-	async createPosts(client: Socket, data: any) {
-		const user = this.users[client.id];
-		if (user) {
-			const result = await this.chatService.createPost(user, data);
-			this.server.emit('newPost', result);
-		} else {
-			console.log('user not found on createPost');
-			client.emit('alert', 'user not found please retry when the connection established!')
-		}
-	}
-
 	@SubscribeMessage('gameHistory')
 	async gameHistory(client: Socket, data: any) {
 		const user = this.users[client.id];
@@ -225,16 +213,62 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	@SubscribeMessage('achievements')
-	async achievements(client: Socket, data: any) {
+	@SubscribeMessage('updatePost')
+	async updatePost(client: Socket, data: {id: number, retweet: number, like: number}) {
 		const user = this.users[client.id];
 		if (user) {
-			return user.achievements;
+			const result = await this.chatService.updatePost(data);
+			if (result.post) {
+				let post = result.post;
+				this.server.emit('postUpdated', {id: post.id, 
+					author: user.fullName, username: user.username, pictureUrl: user.pictureUrl, 
+					content: post.content, time: post.time, likes: post.likes, retweets: post.retweets});
+			} else {
+				client.emit('alert', result.error);
+			}
 		} else {
-			console.log('user not found on achievements');
+			console.log('user not found on updatePost');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+	
+	@SubscribeMessage('createPost')
+	async createPosts(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.createPost(user, data);
+			this.server.emit('newPost', result);
+		} else {
+			console.log('user not found on createPost');
 			client.emit('alert', 'user not found please retry when the connection established!')
 		}
 	}
 
+	@SubscribeMessage('posts')
+	async posts(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			return await this.chatService.getAllPosts();
+		} else {
+			console.log('user not found on posts');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('profile')
+	async achievements(client: Socket, username: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.chatService.profile(username);
+			if (result.data) {
+				return result.data;
+			} else {
+				client.emit('alert', result.error);
+			}
+		} else {
+			console.log('user not found on profile');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
 
 }
