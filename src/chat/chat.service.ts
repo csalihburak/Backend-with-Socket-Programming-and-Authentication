@@ -14,6 +14,13 @@ interface messageStruct {
 	time: any,
 };
 
+interface channelMessages {
+	id: number,
+	sender: number,
+	message: string,
+	time: any,
+}
+
 
 @Injectable()
 export class chatService {
@@ -82,7 +89,7 @@ export class chatService {
 			},
 			select: {
 				id: true,
-				stat: true,
+				status: true,
 				username: true,
 				pictureUrl: true,
 			}
@@ -99,7 +106,7 @@ export class chatService {
 			},
 			select: {
 				id: true,
-				stat: true,
+				status: true,
 				pictureUrl: true,
 				username: true,
 			}
@@ -156,6 +163,39 @@ export class chatService {
 			}
 		} else {
 			return { messages: null, error : `No such a user: ${username}` };
+		}
+	}
+
+
+	async channelMessages(user: User, channelName: string) {
+		const channel = await this.getChannel(channelName);
+		if (channel) {
+			if (channel.userIds.includes(user.id)) {
+				if (!channel.BannedUsers.includes(user.id)) {
+					const messages = await this.prisma.channelMessages.findMany({
+						where: {
+							channelId: channel.id,
+						}
+					});
+					const msg : any[] = [];
+					messages.forEach((message, index)  => {
+						let data : channelMessages = {
+							id: index,
+							message: cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8),
+							sender: message.senderId,
+							time: message.time,
+						}
+						msg.push(data);
+					});
+					return { messages: msg, error: null };
+				} else {
+				return { messages: null, error : `User: ${user.username} banned from the channel: ${channelName}}`};
+				}
+			} else {
+				return { messages: null, error : `User: ${user.username} not on the channel: ${channelName}}`};
+			}
+		} else {
+			return { messages: null, error : `No such a channel: ${channelName}}` };
 		}
 	}
 
@@ -236,7 +276,7 @@ export class chatService {
 				channelsId: channel.id,
 			}
 		});
-		if (channel.userIds.includes(userId)) {
+		if (!channel.userIds.includes(userId)) {
 			console.log('user not in the channel.');
 			return (1);
 		} else if (userMuted) {
@@ -275,7 +315,7 @@ export class chatService {
 			}							
 		} else {
 			if (message.data.message) {
-				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message});
+				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message, time: message.data.time});
 			} else {
 				client.emit('alert', message.data.error);
 			}
@@ -378,8 +418,6 @@ export class chatService {
 		return await utils.userMode(senderId, username, channel, this.prisma);
 	}
 
-
-
 	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
 		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
 			return {message: null, error: 'You are not authorized to use this command.'};
@@ -404,7 +442,7 @@ export class chatService {
 		}
 	}
 
-	async parseMessage(senderId: number, message: string, channel: channels ) : Promise<{type: number, data: {message: string, error: string} }> {
+	async parseMessage(senderId: number, message: string, channel: channels ) {
 		if (message[0] === '/') {
 			return {type: 1, data: await this.commandParse(senderId, message, channel)};
 		} else {
@@ -416,7 +454,7 @@ export class chatService {
 					message: encryptedMessage,
 				}
 			});
-			return {type : 0 , data: { message: message, error: null } };
+			return {type : 0 , data: { message: message, time: channelMessage.time, error: null } };
 		}
 	}
 
@@ -477,7 +515,7 @@ export class chatService {
 				},
 				select: {
 					id: true,
-					stat: true,
+					status: true,
 					pictureUrl: true,
 					username: true,
 				}
@@ -495,7 +533,7 @@ export class chatService {
 					userId: user.id,
 				}
 			});
-			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.won, lost: user.lost, point: user.point} }, error: null}
+			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.status, lost: user.lost, point: user.point} }, error: null}
 		} else {
 			return {data: null, error : `No such a user: ${username}`};
 		}
@@ -503,6 +541,9 @@ export class chatService {
 
 	async getAllPosts() {
 		const posts = await this.prisma.posts.findMany({
+			orderBy: {
+				time: 'desc',	
+			},
 			include: {
 				user: {
 				  select: {

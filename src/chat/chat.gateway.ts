@@ -27,6 +27,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			this.users[client.id] = user;
 			client.join(user.username);
+			// join user to all channels that it is in
 			console.log(`client connected on chatGateway: ${user.username}`);
 		} else {
 			console.log('Error! user not found on chatGateway connection');
@@ -107,15 +108,38 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async getMessages(client: Socket, friend: string) {
 		const user = this.users[client.id];
 		if (user) {
-			console.log('test');
-			const result = await this.chatService.getMessages(user, friend);
-			if (result.messages) {
-				return result.messages;
+			if (friend) {
+				const result = await this.chatService.getMessages(user, friend);
+				if (result.messages) {
+					return result.messages;
+				} else {
+					client.emit('alert', result.error);
+				}
 			} else {
-				client.emit('alert', result.error);
+				client.emit('alert', "Friend not found.");
 			}
 		} else {
 			console.log('error on messageList');
+			client.emit('alert', 'user not found please retry when the connection established!')
+		}
+	}
+
+	@SubscribeMessage('channelMessages')
+	async channelMessages(client: Socket, channelName: any) {
+		const user = this.users[client.id];
+		if (user) {
+			if (channelName) {
+				const result = await this.chatService.channelMessages(user, channelName);
+				if (result.messages) {
+					return result.messages;
+				} else {
+					client.emit('alert', result.error);
+				}
+			} else {
+				client.emit('alert', "channel not found.");
+			}
+		} else {
+			console.log('error on channelMessages');
 			client.emit('alert', 'user not found please retry when the connection established!')
 		}
 	}
@@ -144,6 +168,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const room = await this.chatService.createChannel(roomData, user);
 			if (room.channel) {
+				client.join(room.channel.channelName);
 				this.server.emit('roomCreated', room);
 			} else {
 				client.emit('alert', room.error);
@@ -153,14 +178,16 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
+
 	@SubscribeMessage('joinChannel')
 	async joinChannel(client: Socket, data: {channelName: string, password: string }) {
 		const user = this.users[client.id];
 		if (user) {
 			const result = await this.chatService.joinChannel(user.id, data.channelName, data.password);
 			if (result.channel) {
-				const date = Date.now();
-				this.server.to(data.channelName).emit('userJioned', { message: `User: ${user.username} has joinned the channel`, time: date.toLocaleString()});
+				const date = Date.now().toLocaleString();
+				client.join(data.channelName);
+				this.server.to(data.channelName).emit('userJoined', { message: `User: ${user.username} has joinned the channel`, time: date.toLocaleString()});
 			} else {
 				console.log(result);
 				client.emit('alert', result.error);
@@ -174,7 +201,8 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async messageToRoom(client: Socket, messageData: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const channel = await this.chatService.getChannel(messageData.roomName);
+			console.log(client.rooms);
+			const channel = await this.chatService.getChannel(messageData.channelName);
 			if (channel) {
 				switch (await this.chatService.isUserAllowed(user.id, channel)) {
 					case 0 :
@@ -220,9 +248,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			const result = await this.chatService.updatePost(data);
 			if (result.post) {
 				let post = result.post;
-				this.server.emit('postUpdated', {id: post.id, 
-					author: user.fullName, username: user.username, pictureUrl: user.pictureUrl, 
-					content: post.content, time: post.time, likes: post.likes, retweets: post.retweets});
+				this.server.emit('postUpdated', {id: post.id, content: post.content, time: post.time, likes: post.likes, retweets: post.retweets});
 			} else {
 				client.emit('alert', result.error);
 			}

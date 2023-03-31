@@ -93,7 +93,7 @@ export class GameService {
 			await this.prisma.user.update({
 				where: { id: user.id },
 				data: {
-					stat: stat.IN_GAME,
+					status: stat.IN_GAME,
 					played: user.played + 1,
 				},
 			});

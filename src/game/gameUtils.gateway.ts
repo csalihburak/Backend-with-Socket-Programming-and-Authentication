@@ -124,7 +124,7 @@ export class GameUtilsGateway
 									id: user.id,
 								},
 								data: {
-									stat: stat.ONLINE,
+									status: stat.ONLINE,
 								},
 							});
 							this.games.splice(i, 1);
@@ -134,7 +134,7 @@ export class GameUtilsGateway
 						}
 					}
 				} else {
-					this.prisma.game.update({ //buraya bir düzeltme gelecek
+					this.prisma.game.update({
 						where: {
 							id: game.id,
 						},
@@ -149,7 +149,7 @@ export class GameUtilsGateway
 							id: user.id,
 						},
 						data: {
-							stat: stat.ONLINE,
+							status: stat.ONLINE,
 						},
 					});
 				}

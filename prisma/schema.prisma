@@ -24,6 +24,7 @@ enum stat {
 // Streak_Master //"Awarded to players who win 5 consecutive games of Pong on our website"
 // Social_Butterfly //"Awarded to players who chat with 5 different player on our website."
 //
+
 model User {
   id              Int      @id @default(autoincrement())
   username        String   @unique
@@ -35,10 +36,10 @@ model User {
   achievements    String[]
   friends         Int[]
   blockedUsers    Int[]
-  posts           posts[]  // new field
+  posts           posts[]
   two_factor_auth Boolean  @default(false)
-  point           Int
-  stat            stat     @default(OFFLINE)
+  status          stat     @default(OFFLINE)
+  point           Int      @default(0)
   played          Int      @default(0)
   won             Int      @default(0)
   lost            Int      @default(0)

@@ -28,7 +28,6 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
               coalition: info.coalition,
               two_factor_auth: false,
               pictureUrl: info.pictureUrl,
-			  point: 0,
             },
           });
   
@@ -182,7 +181,7 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 								username: user.username,
 							},
 							data: {
-								stat: stat.ONLINE,
+								status: stat.ONLINE,
 							},
 						});
 						return JSON.stringify({status: 200, token: tokenCreated.token, twoFacAuth: resultInfo.two_factor_auth});

@@ -95,7 +95,7 @@ export class AuthService {
 					won: true,
 					lost: true,
 					point: true,
-					stat: true,
+					status: true,
 				},
 			});
 			if (users) {
