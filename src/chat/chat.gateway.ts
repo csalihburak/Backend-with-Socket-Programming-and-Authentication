@@ -27,7 +27,10 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			this.users[client.id] = user;
 			client.join(user.username);
-			// join user to all channels that it is in
+			const channels = await this.chatService.getAllChannels(user.id);
+			channels.forEach((channel) => {
+				client.join(channel.channelName);
+			});
 			console.log(`client connected on chatGateway: ${user.username}`);
 		} else {
 			console.log('Error! user not found on chatGateway connection');
@@ -67,7 +70,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('error on friendList');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -84,7 +87,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('error on addFriend');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 	
@@ -100,7 +103,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('error on repondRequest');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -120,7 +123,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('error on messageList');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -133,14 +136,14 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				if (result.messages) {
 					return result.messages;
 				} else {
-					client.emit('alert', result.error);
+					client.emit('alert', {code: 'danger', message: result.error});
 				}
 			} else {
-				client.emit('alert', "channel not found.");
+				client.emit('alert', {code : 'warning', message: "channel not found."});
 			}
 		} else {
 			console.log('error on channelMessages');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -152,13 +155,14 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
 				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
+				client.to(receiver.username).emit('alert', { code: 'danger', message: `you have a new message from ${user.username}`, });
 				client.emit('privMessage', { id: message.id, sender: user.username, receiver: receiver.username, message: messageData.messageTxt, time: message.time });
 			} else {
 				console.log(error);
 			}
 		} else {
 			console.log('user not found on privmsg');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -171,10 +175,11 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				client.join(room.channel.channelName);
 				this.server.emit('roomCreated', room);
 			} else {
-				client.emit('alert', room.error);
+				client.emit('alert', { code:'warning', message: room.error });
 			}
 		} else {
 			console.log('user not found on room creation.');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -190,10 +195,11 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				this.server.to(data.channelName).emit('userJoined', { message: `User: ${user.username} has joinned the channel`, time: date.toLocaleString()});
 			} else {
 				console.log(result);
-				client.emit('alert', result.error);
+				client.emit('alert', { code:'warning', message: result.error });
 			}
 		} else {
 			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -206,7 +212,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			if (channel) {
 				switch (await this.chatService.isUserAllowed(user.id, channel)) {
 					case 0 :
-						const message = await this.chatService.parseMessage(user.id, messageData.messageTxt, channel);
+						const message = await this.chatService.parseMessage(user.username, user.id, messageData.messageTxt, channel);
 						await this.chatService.sendMessage(this.server, client, channel, message, user.username);
 						break;
 					case 1 : 
@@ -214,10 +220,10 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 						break;
 					case 2 :
 						let time = await this.chatService.getTime(user.id, channel);
-						client.emit('alert', `You have been muted until ${time}.`);
+						client.emit('alert', {code: 'info', message: `You have been muted until ${time}.`});
 						break;
 					case 3 :
-						client.emit('alert', `You have been banned from this channel.`);
+						client.emit('alert', {code: 'info', message: `You have been banned from this channel.`});
 						break;
 					default :
 						return;
@@ -225,7 +231,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on messageToRoom.');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -237,7 +243,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			return (games);
 		} else {
 			console.log('user not found on gameHistory');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -254,7 +260,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on updatePost');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 	
@@ -266,7 +272,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			this.server.emit('newPost', result);
 		} else {
 			console.log('user not found on createPost');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -277,7 +283,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			return await this.chatService.getAllPosts();
 		} else {
 			console.log('user not found on posts');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -293,7 +299,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on profile');
-			client.emit('alert', 'user not found please retry when the connection established!')
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 

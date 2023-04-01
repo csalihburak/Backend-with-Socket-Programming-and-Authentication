@@ -16,7 +16,7 @@ interface messageStruct {
 
 interface channelMessages {
 	id: number,
-	sender: number,
+	sender: string,
 	message: string,
 	time: any,
 }
@@ -442,7 +442,7 @@ export class chatService {
 		}
 	}
 
-	async parseMessage(senderId: number, message: string, channel: channels ) {
+	async parseMessage(senderName: string, senderId: number, message: string, channel: channels ) {
 		if (message[0] === '/') {
 			return {type: 1, data: await this.commandParse(senderId, message, channel)};
 		} else {
@@ -450,7 +450,7 @@ export class chatService {
 			let channelMessage = await this.prisma.channelMessages.create({
 				data: {
 					channelId: channel.id,
-					senderId: senderId,
+					senderId: senderName,
 					message: encryptedMessage,
 				}
 			});
@@ -555,5 +555,14 @@ export class chatService {
 			  },
 		});
 		return posts;
+	}
+
+	async getAllChannels(userId: number) : Promise<channels[]> {
+		const channels = await this.prisma.channels.findMany({
+			where: {
+				userIds: {has: userId},
+			}
+		});
+		return channels;
 	}
 }

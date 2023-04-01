@@ -1,5 +1,5 @@
-import { User, Game, stat } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { User, Game, stat } from '@prisma/client';
 import { gameStruct } from './gameUtils/game.struct';
 import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -72,7 +72,7 @@ export class GameService {
 	}
 
 	async createGame(user: User, data: any[]): Promise<Game> {
-		let hash = crypto.createHash('sha256').update(data[0] + data[1] + data[3] + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');
+		let hash = crypto.createHash('sha256').update(data[0] + data[1] + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');
 		const game = await this.prisma.game.create({
 				data: {
 					gameId: data[0],
@@ -164,14 +164,14 @@ export class GameService {
 				row: user.row,
 				point: user.point,
 				achievements: user.achievements,
-				stat: stat.ONLINE,
+				status: stat.ONLINE,
 			};
 			if (won) {
 				data.won = user.won + 1;
 				data.point = user.point + 3;
 				data.row = user.row + 1;
 				if (user.played === 1) {
-					data.achievements.push('First Win');
+					data.achievements.push('First Blood');
 				} else if (data.row === 5) {
 					data.achievements.push('Streak Master');
 				} else if (data.row === 10) {
@@ -202,8 +202,10 @@ export class GameService {
 				rightPlayerScore: game.rightPlayer.score,
 			},
 		});
+		let hash = crypto.createHash('sha256').update(game.name + game.round + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');
+		this.prisma.game.delete({where: {hash: hash}});
 		if (game.rightPlayer.score === 0) {
-			ach.push('Perfect Game');
+			ach.push('No mercy');
 			const result = this.prisma.user.update({
 				where: {
 					id: game.rightPlayerId,
@@ -213,7 +215,7 @@ export class GameService {
 				},
 			});
 		} else if (game.leftPlayer.score === 0) {
-			ach.push('Perfect Game');
+			ach.push('No mercy');
 			const result = this.prisma.user.update({
 				where: {
 					id: game.leftPlayerId,

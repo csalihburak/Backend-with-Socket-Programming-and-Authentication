@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Game, User } from '@prisma/client';
-import { Server, Socket } from 'socket.io';
-import { GameService } from './game.service';
 import { gameStruct, update, prup, prdown } from './gameUtils/game.struct';
+import { WebSocketServer } from '@nestjs/websockets';
+import { GameService } from './game.service';
+import { Injectable } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class GameGateaway {
@@ -67,11 +67,11 @@ export class GameGateaway {
 						server.to(gameHash).emit('newUser', users);
 					}
 				} else {
-					client.emit('playerLeft', ['User not found']);
+					client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 				}
 			} else {
 				console.log('Game not found');
-				client.emit('playerLeft', ['Game not found']);
+				client.emit('alert', {code: 'danger', message: `Game not found!`});
 			}
 		}
 	}
@@ -104,7 +104,7 @@ export class GameGateaway {
 				update(game);
 			}
 		} else {
-			client.emit('playerLeft', ['User not found']);
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -138,8 +138,6 @@ export class GameGateaway {
 				if (!(await this.updateGame(game, data, server))) {
 					await this.gameService.addGameHistory(game, user);
 				}
-			} else {
-				client.emit('playerLeft', ['Game is ended']);
 			}
 		}
 	}
@@ -149,8 +147,7 @@ export class GameGateaway {
 		if (user) {
 			server.to(data).emit('getMessage', [user.username, data[1], data[2], data[3]]);
 		} else {
-			client.emit('playerLeft', ['User not found']);
-			console.log('User not found');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 }

@@ -29,6 +29,7 @@ export class GameUtilsGateway
 			client.emit('updateGames', this.games);
 			console.log(`client connected on gameGateway: ${user.username}`);
 		} else {
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 			console.log('Error! user not found on connection');
 		}
 	}
@@ -66,16 +67,16 @@ export class GameUtilsGateway
 			} catch (error) {
 				if (error instanceof Prisma.PrismaClientKnownRequestError) {
 					if (error.code === 'P2002') {
-						return JSON.stringify({
-							status: 403,
-							message: 'Room already exist',
-						});
+						client.emit('alert', {code: 'danger', message: 'Room already exist'});
+						return JSON.stringify({ status: 403, message: 'Room already exist' });
 					}
 				}
+				client.emit('alert', {code: 'danger', message: error});
 				return error;
 			}
 		} else {
 			console.log('User not found');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -96,6 +97,8 @@ export class GameUtilsGateway
 					message: 'Game not found(Maybe is finished or never created)',
 				});
 			}
+		} else {
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 		}
 	}
 
@@ -105,7 +108,7 @@ export class GameUtilsGateway
 		if (user) {
 			return this.games;
 		} else {
-			console.log('User not found');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
 
@@ -129,8 +132,8 @@ export class GameUtilsGateway
 							});
 							this.games.splice(i, 1);
 							this.server.emit('updateGames', this.games);
-							this.server.emit('playerLeft', user.username);
-							return;
+							this.server.emit('playerLeft', [user.username, 0]);
+							return await this.prisma.game.delete({where: {id: game.id}});
 						}
 					}
 				} else {
@@ -155,9 +158,11 @@ export class GameUtilsGateway
 				}
 			} else {
 				console.log('Game not found');
+				client.emit('alert', {code: 'danger', message: 'Game not found'});
 			}
 		} else {
 			console.log('user not found');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 		}
 	}
 

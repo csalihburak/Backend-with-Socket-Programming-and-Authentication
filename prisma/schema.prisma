@@ -65,7 +65,7 @@ model Game {
   rightPlayerId Int
   map           Int
   round         Int
-  gameId        String
+  gameId        String @unique
   private       Boolean
   hash          String  @unique
   status        Int
@@ -136,7 +136,7 @@ model channels {
 model channelMessages {
   id        Int      @id @default(autoincrement())
   channelId Int
-  senderId  Int
+  senderId  String
   message   String
   time      DateTime @default(now())
 }
