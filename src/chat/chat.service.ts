@@ -1,10 +1,10 @@
 import { PrismaService } from "src/prisma/prisma.service";
-import { channels, posts, User, userMute } from "@prisma/client";
+import { channels, User } from "@prisma/client";
+import { channelCommands } from './channel.commands';
 import { Injectable } from "@nestjs/common";
-import { Server, Socket } from "socket.io";
+import { chatUtils } from "./chat.utils";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
-import * as utils from './channel.commands';
 
 interface messageStruct {
 	id: number,
@@ -24,7 +24,7 @@ interface channelMessages {
 
 @Injectable()
 export class chatService {
-	constructor ( public prisma: PrismaService,) {}
+	constructor ( public prisma: PrismaService, public commands: channelCommands, public utils: chatUtils) {}
 
 	async getUser(sessionToken: any) : Promise<User> {
 		if (sessionToken) {
@@ -99,104 +99,13 @@ export class chatService {
 		return null;
 	}
 
-	async getFriends(user: User): Promise<{channels: any[], friends: any[]}> {
-		const friends = await this.prisma.user.findMany({
-			where: {
-				id: {in: user.friends},
-			},
-			select: {
-				id: true,
-				status: true,
-				pictureUrl: true,
-				username: true,
-			}
-		}).catch(error => {
-			console.log(error);
-			console.log('Database error on getting friends');
-		});
+	async getAllChannels(userId: number) : Promise<channels[]> {
 		const channels = await this.prisma.channels.findMany({
 			where: {
-				userIds: { has: user.id },
+				userIds: {has: userId},
 			}
 		});
-		if (friends && channels) {
-			return {channels: channels, friends: friends };
-		} else {
-			console.log('error on getting friends');
-			return null;
-		}
-	}
-
-	async getMessages(user: User, username: string) {
-		const friend = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if (friend) {
-			if (user.friends.includes(friend.id)) {
-				const messages = await this.prisma.messages.findMany({
-					where: {
-						OR: [
-							{ senderId: user.id, receiverId: friend.id },
-							{ senderId: friend.id, receiverId: user.id }
-						]
-					},
-					orderBy: {
-						time: 'asc',
-					}
-				});
-				const msg : any[] = [];
- 				messages.forEach((message, index)  => {
-					let data : messageStruct = {
-						id: index,
-						message: cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8),
- 						sender: user.id === message.senderId ? user.username : username,
-						receiver: user.id === message.receiverId ? user.username : username,
-						time: message.time,
-					}
-					msg.push(data);
-				});
-				return { messages: msg, error: null };
-			} else {
-			return { messages: null, error : `User: ${username} is not your friend.` };
-			}
-		} else {
-			return { messages: null, error : `No such a user: ${username}` };
-		}
-	}
-
-
-	async channelMessages(user: User, channelName: string) {
-		const channel = await this.getChannel(channelName);
-		if (channel) {
-			if (channel.userIds.includes(user.id)) {
-				if (!channel.BannedUsers.includes(user.id)) {
-					const messages = await this.prisma.channelMessages.findMany({
-						where: {
-							channelId: channel.id,
-						}
-					});
-					const msg : any[] = [];
-					messages.forEach((message, index)  => {
-						let data : channelMessages = {
-							id: index,
-							message: cryptojs.AES.decrypt(message.message, process.env.SECRET_KEY).toString(cryptojs.enc.Utf8),
-							sender: message.senderId,
-							time: message.time,
-						}
-						msg.push(data);
-					});
-					return { messages: msg, error: null };
-				} else {
-				return { messages: null, error : `User: ${user.username} banned from the channel: ${channelName}}`};
-				}
-			} else {
-				return { messages: null, error : `User: ${user.username} not on the channel: ${channelName}}`};
-			}
-		} else {
-			return { messages: null, error : `No such a channel: ${channelName}}` };
-		}
+		return channels;
 	}
 
 	async createChannel(roomData: {roomName: string, password: string, priv: boolean }, user: User) : Promise<{channel: channels, error: any}> {
@@ -228,7 +137,7 @@ export class chatService {
 	}
 
 	async joinChannel(userId: number, channelName: string, password: string) : Promise<{channel: channels, error: any}>{
-		const channel = await this.getChannel(channelName);
+		const channel = await this.utils.getChannel(channelName);
 		if (channel) {
 			if (!channel.userIds.includes(userId)) {
 				if (!channel.BannedUsers.includes(userId)) {
@@ -255,70 +164,27 @@ export class chatService {
 		}
 	}
 
-	async getChannel(channelName: string) : Promise<channels>{
-		const room = this.prisma.channels.findUnique({
-			where: {
-				channelName: channelName,
-			}
-		});
-		if (room) {
-			return room;
-		} else {
-			console.log('no such a room on the server!');
-			return null;
+	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
+		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
+			return {message: null, error: 'You are not authorized to use this command.'};
 		}
-	}
-
-	async isUserAllowed(userId: number, channel: channels): Promise<number> {
-		const userMuted = await this.prisma.userMute.findFirst({
-			where: {
-				userId: userId,
-				channelsId: channel.id,
-			}
-		});
-		if (!channel.userIds.includes(userId)) {
-			console.log('user not in the channel.');
-			return (1);
-		} else if (userMuted) {
-			console.log(`user muted for ${ userMuted.mutedTime.getTime() - Date.now()} in this channel(${channel.channelName})`);
-			return (2);
-		} else if (channel.BannedUsers.includes(userId)) {
-			console.log(`user banned from this channel(${channel.channelName})`)
-			return (3);
-		} else {
-			return (0);
+		let commands = message.split(' ');
+		if (commands[1].length <= 1) {
+			return {message: null, error: 'Invalid command syntax.'};
 		}
-	}
-
-	async getTime(userId: number, channle: channels) {
-		const mutedTime = await this.prisma.userMute.findFirst({
-			where: {
-				userId,
-				channelsId: channle.id,
-			},
-		});
-		if (mutedTime) {
-			const date = new Date(mutedTime.mutedTime);
-			return(date.toLocaleString());
-		} else {
-			console.log('error while getting getTime');
-			return -1;
-		}
-	}
-
-	async sendMessage(server: Server, client: Socket, channel: channels, message: any, user: any) {
-		if (message.type === 1) {
-			if (message.data.message) {
-				server.to(channel.channelName).emit('channelCommand',{ sender: user, message: message.data.message });
-			} else {
-				client.emit('alert', message.data.error);
-			}							
-		} else {
-			if (message.data.message) {
-				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message, time: message.data.time});
-			} else {
-				client.emit('alert', message.data.error);
-			}
+		switch (commands[0]) {
+			case '/kick':
+				return await this.commands.kickUser(commands[1], channel);
+			case '/ban':
+				return await this.commands.banUser(commands[1], channel,);
+			case '/mute':
+				return await this.commands.muteUser(commands[1], commands[2], channel);
+			case '/pass':
+				return await this.commands.channelPass(senderId, commands[1], channel);
+			case '/mode':
+				return await this.commands.userMode(senderId, commands[1], channel);
+			default:
+				return {message: null, error: 'Unknown command.'};
 		}
 	}
 
@@ -398,50 +264,6 @@ export class chatService {
 		}
 	}
 
-	async banUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
-		return await utils.banUser(username, channel, this.prisma);
-	}
-
-	async muteUser(username: any,  time: any,  channel: channels) : Promise<{message: string, error: string }> {
-		return await utils.muteUser(username, time, channel, this.prisma)
-	}
-
-	async kickUser(username: any, channel: channels) : Promise<{message: string, error: string }> {
-		return await utils.kickUser(username, channel, this.prisma);
-	}
-
-	async channelPass( senderId: number, password: string, channel: channels ) : Promise<{message: string, error: string }> {
-		return await utils.channelPass(senderId, password, channel, this.prisma);
-	}
-
-	async userMode(senderId: number, username: string, channel: channels) : Promise<{message: string, error: string }> {
-		return await utils.userMode(senderId, username, channel, this.prisma);
-	}
-
-	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
-		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
-			return {message: null, error: 'You are not authorized to use this command.'};
-		}
-		let commands = message.split(' ');
-		if (commands[1].length <= 1) {
-			return {message: null, error: 'Invalid command syntax.'};
-		}
-		switch (commands[0]) {
-			case '/kick':
-				return await this.kickUser(commands[1], channel);
-			case '/ban':
-				return await this.banUser(commands[1], channel);
-			case '/mute':
-				return await this.muteUser(commands[1], commands[2], channel);
-			case '/pass':
-				return await this.channelPass(senderId, commands[1], channel);
-			case '/mode':
-				return await this.userMode(senderId, commands[1], channel);
-			default:
-				return {message: null, error: 'Unknown command.'};
-		}
-	}
-
 	async parseMessage(senderName: string, senderId: number, message: string, channel: channels ) {
 		if (message[0] === '/') {
 			return {type: 1, data: await this.commandParse(senderId, message, channel)};
@@ -456,113 +278,5 @@ export class chatService {
 			});
 			return {type : 0 , data: { message: message, time: channelMessage.time, error: null } };
 		}
-	}
-
-	async createPost(user: User, postData: any) : Promise<{id: number, user: {fullName: string,  username: string, pictureUrl: string}, content: string, time: Date, likes: number, retweets: number }>{
-		const post = await this.prisma.posts.create({
-			data: {
-				content: postData,
-				userId: user.id,
-				likes: 0,
-				retweets: 0,
-			}
-		});
-		return {id: post.id, user: {fullName: user.fullName, username: user.username, pictureUrl: user.pictureUrl }, content: postData, time: post.time, likes: 0, retweets: 0};
-	}
-
-	async gameHistory(userId: number) {
-		const games = await this.prisma.gameHistory.findMany({
-			where: {
-				OR: [
-					{ leftPlayerId: userId,},
-					{ rightPlayerId: userId}
-				],
-			},
-		});
-		return (games);
-	}
-
-	async updatePost(data: any) : Promise<{error: any, post: posts}> {
-		const post = await this.prisma.posts.findUnique({
-			where: { id: data.id }
-		});
-		if (post) {
-			const updatePost = await this.prisma.posts.update({
-				where: {
-					id: post.id,
-				},
-				data: {
-					likes: post.likes + data.like,
-					retweets: post.retweets + data.retweet,
-				}
-			});
-			return {error: null, post: updatePost };
-		} else {
-			return {error: `Can not find the post with id: ${data.id}`, post: null}
-		}
-	}
-
-	async profile(username: string) : Promise<{data: { friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
-		const user = await this.prisma.user.findUnique({
-			where: {
-				username,
-			}
-		});
-		if (user) {
-			const friends = await this.prisma.user.findMany({
-				where: {
-					id: {in: user.friends},
-				},
-				select: {
-					id: true,
-					status: true,
-					pictureUrl: true,
-					username: true,
-				}
-			});
-			const matchHistory = await this.prisma.gameHistory.findMany({
-				where: {
-					OR: [
-						{leftPlayerId: user.id},
-						{rightPlayerId: user.id},
-					],
-				},
-			});
-			const posts = await this.prisma.posts.findMany({
-				where: {
-					userId: user.id,
-				}
-			});
-			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.status, lost: user.lost, point: user.point} }, error: null}
-		} else {
-			return {data: null, error : `No such a user: ${username}`};
-		}
-	}
-
-	async getAllPosts() {
-		const posts = await this.prisma.posts.findMany({
-			orderBy: {
-				time: 'desc',	
-			},
-			include: {
-				user: {
-				  select: {
-					username: true,
-					fullName: true,
-					pictureUrl: true,
-				  },
-				},
-			  },
-		});
-		return posts;
-	}
-
-	async getAllChannels(userId: number) : Promise<channels[]> {
-		const channels = await this.prisma.channels.findMany({
-			where: {
-				userIds: {has: userId},
-			}
-		});
-		return channels;
 	}
 }

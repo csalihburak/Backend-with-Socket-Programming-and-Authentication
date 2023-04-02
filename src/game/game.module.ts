@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { GameGateaway } from './game.gateaway';
-import { GameUtilsGateway } from './gameUtils.gateway';
+import { GameGateaway } from './gameUtils';
+import { GameUtilsGateway } from './game.gateway';
 import { GameService } from './game.service'
 
 @Module({

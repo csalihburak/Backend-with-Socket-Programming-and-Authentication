@@ -1,7 +1,9 @@
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { chatService } from './chat.service';
 import { Server, Socket } from 'socket.io';
+import { chatUtils } from './chat.utils';
 import { Logger } from '@nestjs/common';
+import { webUtils } from './web.utils';
 import { User } from '@prisma/client';
 
 interface message {
@@ -12,7 +14,7 @@ interface message {
 
 @WebSocketGateway({ namespace: '/socket/chat' })
 export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatewayConnection {
-	constructor(public chatService: chatService) {}
+	constructor(public chatService: chatService, public utils: chatUtils, public webUtils: webUtils) {}
  	@WebSocketServer() server: Server;
 	private logger: Logger = new Logger('chatGateway');
 	users: Record<string, User> = {};
@@ -62,7 +64,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async getFriends(client: Socket, data: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.getFriends(user);
+			const result = await this.utils.getFriends(user);
 			if (result) {
 				client.emit('friendList', { channels: result.channels, friends: result.friends });
 			} else {
@@ -112,7 +114,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			if (friend) {
-				const result = await this.chatService.getMessages(user, friend);
+				const result = await this.utils.getMessages(user, friend);
 				if (result.messages) {
 					return result.messages;
 				} else {
@@ -132,7 +134,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			if (channelName) {
-				const result = await this.chatService.channelMessages(user, channelName);
+				const result = await this.utils.channelMessages(user, channelName);
 				if (result.messages) {
 					return result.messages;
 				} else {
@@ -208,18 +210,18 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			console.log(client.rooms);
-			const channel = await this.chatService.getChannel(messageData.channelName);
+			const channel = await this.utils.getChannel(messageData.channelName);
 			if (channel) {
-				switch (await this.chatService.isUserAllowed(user.id, channel)) {
+				switch (await this.utils.isUserAllowed(user.id, channel)) {
 					case 0 :
 						const message = await this.chatService.parseMessage(user.username, user.id, messageData.messageTxt, channel);
-						await this.chatService.sendMessage(this.server, client, channel, message, user.username);
+						await this.utils.sendMessage(this.server, client, channel, message, user.username);
 						break;
 					case 1 : 
 						client.emit('alert', `User: ${user.username} not on the channel.`)
 						break;
 					case 2 :
-						let time = await this.chatService.getTime(user.id, channel);
+						let time = await this.utils.getTime(user.id, channel);
 						client.emit('alert', {code: 'info', message: `You have been muted until ${time}.`});
 						break;
 					case 3 :
@@ -239,7 +241,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async gameHistory(client: Socket, data: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const games = await this.chatService.gameHistory(user.id);
+			const games = await this.webUtils.gameHistory(user.id);
 			return (games);
 		} else {
 			console.log('user not found on gameHistory');
@@ -251,7 +253,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async updatePost(client: Socket, data: {id: number, retweet: number, like: number}) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.updatePost(data);
+			const result = await this.webUtils.updatePost(data);
 			if (result.post) {
 				let post = result.post;
 				this.server.emit('postUpdated', {id: post.id, content: post.content, time: post.time, likes: post.likes, retweets: post.retweets});
@@ -268,7 +270,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async createPosts(client: Socket, data: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.createPost(user, data);
+			const result = await this.webUtils.createPost(user, data);
 			this.server.emit('newPost', result);
 		} else {
 			console.log('user not found on createPost');
@@ -280,7 +282,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async posts(client: Socket, data: any) {
 		const user = this.users[client.id];
 		if (user) {
-			return await this.chatService.getAllPosts();
+			return await this.webUtils.getAllPosts();
 		} else {
 			console.log('user not found on posts');
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
@@ -291,7 +293,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async achievements(client: Socket, username: string) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.profile(username);
+			const result = await this.webUtils.profile(username);
 			if (result.data) {
 				return result.data;
 			} else {

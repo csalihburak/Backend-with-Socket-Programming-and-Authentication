@@ -5,21 +5,21 @@ import { CorsMiddleware } from '@nest-middlewares/cors';
 import { GameModule } from './game/game.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { chatGateAWay } from './chat/chat.gateway';
-import { chatService } from './chat/chat.service';
+import { chatModule } from './chat/chat.module';
 
 @Module({
 	imports: [
 		AuthModule,
-		PrismaModule,
 		GameModule,
+		chatModule,
+		PrismaModule,
 		ServeStaticModule.forRoot({
 			rootPath: join(__dirname, '..', 'public'),
 			serveRoot: '/public',
 			exclude: ['/api*'],
 		}),
 	],
-	providers: [chatGateAWay, chatService]
+		providers: []
 })
 export class AppModule {
 	configure(consumer: any) {

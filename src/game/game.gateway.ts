@@ -1,7 +1,7 @@
 import { SubscribeMessage, WebSocketGateway, WebSocketServer,} from '@nestjs/websockets';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Game, stat, User } from '@prisma/client';
-import { GameGateaway } from './game.gateaway';
+import { GameGateaway } from './gameUtils';
 import { GameService } from './game.service';
 import { Server, Socket } from 'socket.io';
 import { Prisma } from '@prisma/client';

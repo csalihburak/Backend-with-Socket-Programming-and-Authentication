@@ -19,9 +19,9 @@ export class AuthController {
 		const response = await this.authService.intraGet(query.code, req);
 		const parse= JSON.parse(response);
 		if (parse.status == 200) {
-			res.redirect(`http://142.93.104.99:3000/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
 		} else {
-			res.redirect(`http://142.93.104.99:3000/setProfile?sessionToken=${parse.token}`);
+			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${parse.token}`);
 		}
 		res.end();
 		return;
