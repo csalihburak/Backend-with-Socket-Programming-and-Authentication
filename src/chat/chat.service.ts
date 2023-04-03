@@ -91,6 +91,7 @@ export class chatService {
 				id: true,
 				status: true,
 				username: true,
+				fullName: true,
 				pictureUrl: true,
 			}
 		});
@@ -278,5 +279,19 @@ export class chatService {
 			});
 			return {type : 0 , data: { message: message, time: channelMessage.time, error: null } };
 		}
+	}
+
+	async channelUsers(channel: channels) {
+		const users = await this.prisma.user.findMany({
+			where: {
+				id: {in: channel.userIds},
+			},
+			select: {
+				id: true,
+				username: true,
+				pictureUrl: true,
+			}
+		});
+		return users;
 	}
 }

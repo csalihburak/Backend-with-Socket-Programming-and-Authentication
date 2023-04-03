@@ -64,7 +64,6 @@ export class webUtils{
 					id: {in: user.friends},
 				},
 				select: {
-					id: true,
 					status: true,
 					pictureUrl: true,
 					username: true,
@@ -81,9 +80,18 @@ export class webUtils{
 			const posts = await this.prisma.posts.findMany({
 				where: {
 					userId: user.id,
-				}
+				},
+				include: {
+					user: {
+					  select: {
+						username: true,
+						fullName: true,
+						pictureUrl: true,
+					  },
+					},
+				  },
 			});
-			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.status, lost: user.lost, point: user.point} }, error: null}
+			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.won, lost: user.lost, point: user.point} }, error: null}
 		} else {
 			return {data: null, error : `No such a user: ${username}`};
 		}

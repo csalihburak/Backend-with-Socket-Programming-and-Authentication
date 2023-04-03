@@ -53,6 +53,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const users = await this.chatService.getUsers(user.id);
+			return users;
 			client.emit('userList', users);
 		} else {
 			console.log('error on userList');
@@ -185,6 +186,22 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
+	@SubscribeMessage('channelUsers')
+	async channelUsers(client: Socket, channelName: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const channel = await this.utils.getChannel(channelName);
+			if (channel) {
+				return await this.chatService.channelUsers(channel);
+			} else {
+				client.emit('alert', {code: 'danger', message: "No such a channel"});
+			}
+
+		} else {
+			console.log('user not found on channelUsers.');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
+		}
+	}
 
 	@SubscribeMessage('joinChannel')
 	async joinChannel(client: Socket, data: {channelName: string, password: string }) {
