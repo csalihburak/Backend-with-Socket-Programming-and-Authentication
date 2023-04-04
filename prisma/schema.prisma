@@ -65,7 +65,7 @@ model Game {
   rightPlayerId Int
   map           Int
   round         Int
-  gameId        String @unique
+  gameId        String  @unique
   private       Boolean
   hash          String  @unique
   status        Int
@@ -96,10 +96,12 @@ model friendRequest {
 
 model GameHistory {
   id               Int      @id @default(autoincrement())
-  leftPlayerId     Int
-  rightPlayerId    Int
+  leftPlayer       String
+  rightPlayer      String
   leftPlayerScore  Int
   rightPlayerScore Int
+  leftPlayerImg    String
+  rightPlayerImg   String
   gameTime         DateTime @default(now())
 
   @@map("gameHistorys")

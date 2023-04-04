@@ -193,13 +193,19 @@ export class GameService {
 
 	async addGameHistory(game: gameStruct, user: User) {
 		const ach = user.achievements;
-		console.log(game.leftPlayerId);
+		const otherPlayer = await this.prisma.user.findUnique({
+			where: {
+				username: game.leftPlayer.name === user.username ? game.rightPlayer.name : "",
+			}, 
+		});
 		const history = await this.prisma.gameHistory.create({
 			data: {
-				leftPlayerId: game.leftPlayerId,
-				rightPlayerId: game.rightPlayerId,
+				leftPlayer: game.leftPlayer.name,
+				rightPlayer: game.rightPlayer.name,
 				leftPlayerScore: game.leftPlayer.score,
 				rightPlayerScore: game.rightPlayer.score,
+				leftPlayerImg: game.leftPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
+				rightPlayerImg: game.rightPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
 			},
 		});
 		let hash = crypto.createHash('sha256').update(game.name + game.round + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');

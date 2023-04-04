@@ -148,14 +148,14 @@ export class chatUtils {
 
     async sendMessage(server: Server, client: Socket, channel: channels, message: any, user: any) {
 		if (message.type === 1) {
-			if (message.data.message) {
-				server.to(channel.channelName).emit('channelCommand',{ sender: user, message: message.data.message });
+			if (message.data.messageData) {
+				server.to(channel.channelName).emit('channelCommand', { id: message.data.messageData.id, sender: 'admin', message: message.data.messageData.message, time: message.data.messageData.time });
 			} else {
 				client.emit('alert', message.data.error);
 			}							
 		} else {
 			if (message.data.message) {
-				server.to(channel.channelName).emit('channelMessage', {sender: user, message: message.data.message, time: message.data.time});
+				server.to(channel.channelName).emit('channelMessage', { sender: user, message: message.data.message, time: message.data.time});
 			} else {
 				client.emit('alert', message.data.error);
 			}

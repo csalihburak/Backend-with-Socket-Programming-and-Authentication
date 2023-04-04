@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseInterceptors,UploadedFile, Req, BadRequestException, Res, Render} from '@nestjs/common';
+import { Controller, Get, Post, Query, UseInterceptors, UploadedFile, Req, Res} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
@@ -19,9 +19,9 @@ export class AuthController {
 		const response = await this.authService.intraGet(query.code, req);
 		const parse= JSON.parse(response);
 		if (parse.status == 200) {
-			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+			res.redirect(`http://165.227.172.180:3000/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
 		} else {
-			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${parse.token}`);
+			res.redirect(`http://165.227.172.180:3000/setProfile?sessionToken=${parse.token}`);
 		}
 		res.end();
 		return;
@@ -118,14 +118,9 @@ export class AuthController {
 		res.end();
 	}
 
-/* 	@Get('test')
-	async test() {
-		const message = 'This is a secret message';
-		const key = process.env.SECRET_KEY;
-		
-		const encryptedMessage = crypto.AES.encrypt(message, key).toString();
-		console.log(encryptedMessage);
-		const decryptedMessage = crypto.AES.decrypt(encryptedMessage, key).toString(crypto.enc.Utf8);
-		console.log(decryptedMessage);
-	} */
+	@Post('logout')
+	async logout(@Req() req: Request) {
+		const sessionToken = req.body.sessionToken;
+		return await this.authService.logOut(sessionToken);
+	}
 }

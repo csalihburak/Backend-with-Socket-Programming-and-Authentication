@@ -134,6 +134,19 @@ export class AuthService {
 		} else {
 			return JSON.stringify({status: 404, message: "Session not found"});
 		}
+	}
 
+	async logOut(sessionToken: string) {
+		const session = await getSession(sessionToken, this.prisma);
+		if (session.status === 200) {
+			let deletedSession = await this.prisma.sessionToken.delete({
+				where: {
+					token: sessionToken,
+				}
+			});
+			return JSON.stringify({status: 200, message: `User ${session.user.username} has logged out successfully`});
+		} else {
+			return session.message;
+		}
 	}
 }

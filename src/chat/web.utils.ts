@@ -20,12 +20,12 @@ export class webUtils{
 		return {id: post.id, user: {fullName: user.fullName, username: user.username, pictureUrl: user.pictureUrl }, content: postData, time: post.time, likes: 0, retweets: 0};
 	}
 
-	async gameHistory(userId: number) {
+	async gameHistory(username: string) {
 		const games = await this.prisma.gameHistory.findMany({
 			where: {
 				OR: [
-					{ leftPlayerId: userId,},
-					{ rightPlayerId: userId}
+					{ leftPlayer: username,},
+					{ rightPlayer: username}
 				],
 			},
 		});
@@ -52,7 +52,7 @@ export class webUtils{
 		}
 	}
 
-	async profile(username: string) : Promise<{data: { friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
+	async profile(username: string) : Promise<{data: { img: string, friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
 		const user = await this.prisma.user.findUnique({
 			where: {
 				username,
@@ -72,8 +72,8 @@ export class webUtils{
 			const matchHistory = await this.prisma.gameHistory.findMany({
 				where: {
 					OR: [
-						{leftPlayerId: user.id},
-						{rightPlayerId: user.id},
+						{leftPlayer: user.username},
+						{rightPlayer: user.username},
 					],
 				},
 			});
@@ -91,7 +91,7 @@ export class webUtils{
 					},
 				  },
 			});
-			return {data: {friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.won, lost: user.lost, point: user.point} }, error: null}
+			return {data: {img: user.pictureUrl, friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.won, lost: user.lost, point: user.point} }, error: null}
 		} else {
 			return {data: null, error : `No such a user: ${username}`};
 		}

@@ -54,7 +54,6 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const users = await this.chatService.getUsers(user.id);
 			return users;
-			client.emit('userList', users);
 		} else {
 			console.log('error on userList');
 			client.emit('alert', 'user not found please retry when the connection established!')
@@ -226,12 +225,11 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async messageToRoom(client: Socket, messageData: any) {
 		const user = this.users[client.id];
 		if (user) {
-			console.log(client.rooms);
 			const channel = await this.utils.getChannel(messageData.channelName);
 			if (channel) {
 				switch (await this.utils.isUserAllowed(user.id, channel)) {
 					case 0 :
-						const message = await this.chatService.parseMessage(user.username, user.id, messageData.messageTxt, channel);
+						const message = await this.chatService.parseMessage(user, user.id, messageData.messageTxt, channel);
 						await this.utils.sendMessage(this.server, client, channel, message, user.username);
 						break;
 					case 1 : 
@@ -258,7 +256,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async gameHistory(client: Socket, data: any) {
 		const user = this.users[client.id];
 		if (user) {
-			const games = await this.webUtils.gameHistory(user.id);
+			const games = await this.webUtils.gameHistory(user.username);
 			return (games);
 		} else {
 			console.log('user not found on gameHistory');

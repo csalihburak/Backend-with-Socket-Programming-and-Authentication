@@ -165,27 +165,27 @@ export class chatService {
 		}
 	}
 
-	async commandParse(senderId: number, message: string, channel: channels ) : Promise<{message: string, error: string }> {
-		if (!channel.adminIds.includes(senderId) && channel.ownerId !== senderId) {
-			return {message: null, error: 'You are not authorized to use this command.'};
+	async commandParse(user: User, message: string, channel: channels ) :  Promise<{messageData:{ id: number, message: string, time: string}, error: string }> {
+		if (!channel.adminIds.includes(user.id) && channel.ownerId !== user.id) {
+			return {messageData: null, error: 'You are not authorized to use this command.'};
 		}
 		let commands = message.split(' ');
 		if (commands[1].length <= 1) {
-			return {message: null, error: 'Invalid command syntax.'};
+			return {messageData: null, error: 'Invalid command syntax.'};
 		}
 		switch (commands[0]) {
 			case '/kick':
-				return await this.commands.kickUser(commands[1], channel);
+				return await this.commands.kickUser(user, commands[1], channel);
 			case '/ban':
-				return await this.commands.banUser(commands[1], channel,);
+				return await this.commands.banUser(user, commands[1], channel,);
 			case '/mute':
-				return await this.commands.muteUser(commands[1], commands[2], channel);
+				return await this.commands.muteUser(user, commands[1], commands[2], channel);
 			case '/pass':
-				return await this.commands.channelPass(senderId, commands[1], channel);
+				return await this.commands.channelPass(user, commands[1], channel);
 			case '/mode':
-				return await this.commands.userMode(senderId, commands[1], channel);
+				return await this.commands.userMode(user, commands[1], channel);
 			default:
-				return {message: null, error: 'Unknown command.'};
+				return {messageData: null, error: 'Unknown command.'};
 		}
 	}
 
@@ -265,19 +265,19 @@ export class chatService {
 		}
 	}
 
-	async parseMessage(senderName: string, senderId: number, message: string, channel: channels ) {
+	async parseMessage(user: User, senderId: number, message: string, channel: channels ) {
 		if (message[0] === '/') {
-			return {type: 1, data: await this.commandParse(senderId, message, channel)};
+			return {type: 1, data: await this.commandParse(user, message, channel)};
 		} else {
 			const encryptedMessage = cryptojs.AES.encrypt(message, process.env.SECRET_KEY).toString();
 			let channelMessage = await this.prisma.channelMessages.create({
 				data: {
 					channelId: channel.id,
-					senderId: senderName,
+					senderId: user.username,
 					message: encryptedMessage,
 				}
 			});
-			return {type : 0 , data: { message: message, time: channelMessage.time, error: null } };
+			return {type : 0 , data: {id: channelMessage.id, message: message, time: channelMessage.time, error: null } };
 		}
 	}
 

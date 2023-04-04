@@ -215,7 +215,7 @@ export async function getSession(token: string, prisma: PrismaService): Promise<
 		});
 		if (user) {
 			delete user.pass;
-			return user;
+			return JSON.stringify({ status: 200, user: user});
 		} else {
 			return JSON.stringify({ status: 501, message: "Something went wrong."});
 		}
