@@ -77,7 +77,7 @@ export class GameService {
 				data: {
 					gameId: data[0],
 					leftPlayerId: user.id,
-					rightPlayerId: 0,
+					rightPlayerId: data[4],
 					round: data[1],
 					map: data[2],
 					private: data[3],

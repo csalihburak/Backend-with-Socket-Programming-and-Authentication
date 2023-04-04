@@ -29,6 +29,7 @@ export class GameGateaway {
 			if (game) {
 				const user = await this.gameService.getUser(sessionToken);
 				if (user) {
+					console.log(user);
 					const users = await this.gameService.getUsers(game);
 					this.clients.push(client);
 					this.users[client.id] = user;

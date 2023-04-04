@@ -7,6 +7,10 @@ import { Server, Socket } from 'socket.io';
 import { Prisma } from '@prisma/client';
 import { Logger } from '@nestjs/common';
 
+
+
+
+
 @WebSocketGateway({ namespace: '/socket/gameUtils' })
 export class GameUtilsGateway 
 {
@@ -15,6 +19,9 @@ export class GameUtilsGateway
 	private logger: Logger = new Logger('game');
 	users: Record<string, User> = {};
 	games: any[] = [];
+	queue: User[] = []
+	randomWords = require('random-words');
+
 
 	afterInit(server: Server) {
 		this.logger.log('Initialized Game utils Socket');
@@ -159,6 +166,42 @@ export class GameUtilsGateway
 			} else {
 				console.log('Game not found');
 				client.emit('alert', {code: 'danger', message: 'Game not found'});
+			}
+		} else {
+			console.log('user not found');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
+		}
+	}
+
+	@SubscribeMessage('joinQueue')
+	async joinQueue(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			if (this.queue.length === 0) {
+				console.log('first');
+				console.log(user.username);
+				this.queue.push(user);
+				let gameName = this.randomWords({exactly: 9})[3];
+				let game = await this.gameService.createGame(user, [gameName, 5, Math.round(Math.random()) + 1, true, -1]);
+				if (game) {
+					client.join(gameName);
+				}
+			} else {
+				const game = await this.prisma.game.findFirst({
+					where: {
+						rightPlayerId: -1,
+					}
+				});
+				if (game) {
+					console.log('second');
+					console.log(user.username);
+					const updatedGame = await this.gameService.updateGame(user, game);
+					if (updatedGame) {
+						client.join(game.gameId);
+						this.server.to(game.gameId).emit('matchFound', game.hash);
+					}
+					this.queue.splice(0, 2);
+				}
 			}
 		} else {
 			console.log('user not found');
