@@ -156,9 +156,9 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			const {receiver, error } = await this.chatService.getReceiver(user, messageData.receiver);
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
-				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
+				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time.toLocaleString() });
 				client.to(receiver.username).emit('alert', { code: 'danger', message: `you have a new message from ${user.username}`, });
-				client.emit('privMessage', { id: message.id, sender: user.username, receiver: receiver.username, message: messageData.messageTxt, time: message.time });
+				client.emit('privMessage', { id: message.id, sender: user.username, receiver: receiver.username, message: messageData.messageTxt, time: message.time.toLocaleString() });
 			} else {
 				console.log(error);
 			}

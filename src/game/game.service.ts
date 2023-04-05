@@ -143,6 +143,7 @@ export class GameService {
 		if (game) {
 			return game;
 		} else {
+			console.log('error');
 			console.log('Error while getting game');
 			return null;
 		}
@@ -198,16 +199,18 @@ export class GameService {
 				username: game.leftPlayer.name === user.username ? game.rightPlayer.name : "",
 			}, 
 		});
-		const history = await this.prisma.gameHistory.create({
-			data: {
-				leftPlayer: game.leftPlayer.name,
-				rightPlayer: game.rightPlayer.name,
-				leftPlayerScore: game.leftPlayer.score,
-				rightPlayerScore: game.rightPlayer.score,
-				leftPlayerImg: game.leftPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
-				rightPlayerImg: game.rightPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
-			},
-		});
+		if (user && otherPlayer) {
+			const history = await this.prisma.gameHistory.create({
+				data: {
+					leftPlayer: game.leftPlayer.name,
+					rightPlayer: game.rightPlayer.name,
+					leftPlayerScore: game.leftPlayer.score,
+					rightPlayerScore: game.rightPlayer.score,
+					leftPlayerImg: game.leftPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
+					rightPlayerImg: game.rightPlayer.name === user.username ? user.pictureUrl : otherPlayer.pictureUrl,
+				},
+			});
+		}
 		let hash = crypto.createHash('sha256').update(game.name + game.round + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');
 		this.prisma.game.delete({where: {hash: hash}});
 		if (game.rightPlayer.score === 0) {

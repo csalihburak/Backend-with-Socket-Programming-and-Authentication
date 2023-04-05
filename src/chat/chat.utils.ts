@@ -60,10 +60,10 @@ export class chatUtils {
 					});
 					return { messages: msg, error: null };
 				} else {
-				return { messages: null, error : `User: ${user.username} banned from the channel: ${channelName}}`};
+				return { messages: null, error : `User: ${user.username} banned from the channel: ${channelName}`};
 				}
 			} else {
-				return { messages: null, error : `User: ${user.username} not on the channel: ${channelName}}`};
+				return { messages: null, error : `User: ${user.username} not on the channel: ${channelName}`};
 			}
 		} else {
 			return { messages: null, error : `No such a channel: ${channelName}}` };
@@ -136,8 +136,17 @@ export class chatUtils {
 			console.log('user not in the channel.');
 			return (1);
 		} else if (userMuted) {
-			console.log(`user muted for ${ userMuted.mutedTime.getTime() - Date.now()} in this channel(${channel.channelName})`);
-			return (2);
+			if (userMuted.mutedTime.getTime() - Date.now() < 0) {
+				const muted = await this.prisma.userMute.delete({
+					where: {
+						id: userMuted.id,
+					}
+				});
+				return(0);
+			} else {
+				console.log(`user muted for ${ userMuted.mutedTime.getTime() - Date.now()} in this channel(${channel.channelName})`);
+				return (2);
+			}
 		} else if (channel.BannedUsers.includes(userId)) {
 			console.log(`user banned from this channel(${channel.channelName})`)
 			return (3);
@@ -151,13 +160,13 @@ export class chatUtils {
 			if (message.data.messageData) {
 				server.to(channel.channelName).emit('channelCommand', { id: message.data.messageData.id, sender: 'admin', message: message.data.messageData.message, time: message.data.messageData.time });
 			} else {
-				client.emit('alert', message.data.error);
+				client.emit('alert', {code: 'danger', message: message.data.error});
 			}							
 		} else {
 			if (message.data.message) {
 				server.to(channel.channelName).emit('channelMessage', { sender: user, message: message.data.message, time: message.data.time});
 			} else {
-				client.emit('alert', message.data.error);
+				client.emit('alert', {code: 'danger', message: message.data.error});
 			}
 		}
 	}

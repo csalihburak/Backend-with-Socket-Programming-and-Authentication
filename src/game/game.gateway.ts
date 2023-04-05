@@ -44,7 +44,7 @@ export class GameUtilsGateway
 	async handleDisconnect(client: Socket) {
 		const user = this.users[client.id];
 		if (user) {
-			console.log(`client disconnected: ${user.username}`);
+			console.log(`client disconnected from chatGateway: ${user.username}`);
 			this.users[client.id] = null;
 		}
 	}
@@ -181,10 +181,21 @@ export class GameUtilsGateway
 				console.log('first');
 				console.log(user.username);
 				this.queue.push(user);
+				
 				let gameName = this.randomWords({exactly: 9})[3];
 				let game = await this.gameService.createGame(user, [gameName, 5, Math.round(Math.random()) + 1, true, -1]);
 				if (game) {
 					client.join(gameName);
+					if (game) {
+						let data = {
+							name: game.gameId,
+							hash: game.hash,
+							userName: user.username,
+							pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`,
+							gameStatus: game.status,
+						};
+						const bekle = await this.test(data);
+					}
 				}
 			} else {
 				const game = await this.prisma.game.findFirst({
@@ -197,12 +208,16 @@ export class GameUtilsGateway
 					console.log(user.username);
 					const updatedGame = await this.gameService.updateGame(user, game);
 					if (updatedGame) {
-						client.join(game.gameId);
+						//client.join(game.gameId);
+						client.emit('matchFound', game.hash);
+						this.utils.sleep(2000);
 						this.server.to(game.gameId).emit('matchFound', game.hash);
 					}
 					this.queue.splice(0, 2);
+					return;
 				}
 			}
+
 		} else {
 			console.log('user not found');
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})

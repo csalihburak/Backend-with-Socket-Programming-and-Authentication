@@ -64,6 +64,18 @@ function resetGame(game: gameStruct) {
 	game.leftPlayer.paddle.y = game.canvas.height / 2 - 50;
 }
 
+function createRandom(x: number, y: number) {
+	const rand = Math.floor(Math.random() * 3) + 1;
+	if (rand == 0) {
+		return (x *= y); 
+	} else if (rand == 1) {
+		return (x += y);
+	} else {
+		return (x *= y + 0.5); 
+	}
+}
+
+
 
 export function update(game: gameStruct) {
 
@@ -76,15 +88,16 @@ export function update(game: gameStruct) {
 			if (game.ball.y < game.rightPlayer.paddle.y || game.ball.y > game.rightPlayer.paddle.y + game.rightPlayer.paddle.height) {
 				game.leftPlayer.score++;
 			}
-			game.ball.velocityX *= -1;
-			game.ball.velocityY *= +1;
+			game.ball.velocityX = createRandom(game.ball.velocityX, -1);
+			game.ball.velocityY = createRandom(game.ball.velocityY, 1);
 			
 		} else if (7 > (game.ball.x + game.ball.radius)) {
 			if (game.ball.y < game.leftPlayer.paddle.y || game.ball.y > game.leftPlayer.paddle.y + game.leftPlayer.paddle.height) {
 				game.rightPlayer.score++;
 			}
-			game.ball.velocityX *= -1;
-			game.ball.velocityY *= +1;
+			game.ball.velocityX = createRandom(game.ball.velocityX, -1);
+			game.ball.velocityY = createRandom(game.ball.velocityY, 1);
+
 		} else if ( ((game.ball.y + game.ball.radius) >= game.leftPlayer.paddle.y) && ((game.ball.y + game.ball.radius + 2) <= (game.leftPlayer.paddle.y + game.leftPlayer.paddle.height)) && ((game.ball.x - game.ball.radius - 2) <= game.leftPlayer.paddle.width)) {
 			
 			game.ball.velocityY = +game.ball.velocityY;

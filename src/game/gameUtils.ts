@@ -29,7 +29,6 @@ export class GameGateaway {
 			if (game) {
 				const user = await this.gameService.getUser(sessionToken);
 				if (user) {
-					console.log(user);
 					const users = await this.gameService.getUsers(game);
 					this.clients.push(client);
 					this.users[client.id] = user;
@@ -66,6 +65,7 @@ export class GameGateaway {
 						client.emit('initalize', play);
 						client.emit('join', play);
 						server.to(gameHash).emit('newUser', users);
+						return JSON.stringify({status: 200, gameHash: gameHash})
 					}
 				} else {
 					client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
@@ -137,6 +137,7 @@ export class GameGateaway {
 			let game = this.games[data[0]];
 			if (game && game.status == 1) {
 				if (!(await this.updateGame(game, data, server))) {
+					console.log(user);
 					await this.gameService.addGameHistory(game, user);
 				}
 			}
@@ -151,4 +152,8 @@ export class GameGateaway {
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
+
+	async sleep(ms: number): Promise<void> {
+		return new Promise(resolve => setTimeout(resolve, ms));
+	  }
 }
