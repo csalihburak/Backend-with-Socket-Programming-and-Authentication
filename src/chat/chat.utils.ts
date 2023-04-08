@@ -158,7 +158,8 @@ export class chatUtils {
     async sendMessage(server: Server, client: Socket, channel: channels, message: any, user: any) {
 		if (message.type === 1) {
 			if (message.data.messageData) {
-				server.to(channel.channelName).emit('channelCommand', { id: message.data.messageData.id, sender: 'admin', message: message.data.messageData.message, time: message.data.messageData.time });
+				console.log(message.data.messageData);
+				server.to(channel.channelName).emit('channelCommand', { id: message.data.messageData.id, sender: 'admin', message: message.data.messageData.message, gameHash: message.data.messageData.gameHash ? message.data.messageData.gameHash: null, time: message.data.messageData.time });
 			} else {
 				client.emit('alert', {code: 'danger', message: message.data.error});
 			}							

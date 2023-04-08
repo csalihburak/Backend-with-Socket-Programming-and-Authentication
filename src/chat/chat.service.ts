@@ -166,12 +166,12 @@ export class chatService {
 	}
 
 	async commandParse(user: User, message: string, channel: channels ) :  Promise<{messageData:{ id: number, message: string, time: string}, error: string }> {
-		if (!channel.adminIds.includes(user.id) && channel.ownerId !== user.id) {
-			return {messageData: null, error: 'You are not authorized to use this command.'};
-		}
 		let commands = message.split(' ');
-		if (commands[1].length <= 1) {
+		if (commands[1].length <= 1 || commands[1] == user.username) {
 			return {messageData: null, error: 'Invalid command syntax.'};
+		}
+		if (commands[0] !== '/invite'  &&  (!channel.adminIds.includes(user.id) && channel.ownerId !== user.id)) {
+			return {messageData: null, error: 'You are not authorized to use this command.'};
 		}
 		switch (commands[0]) {
 			case '/kick':
@@ -184,6 +184,8 @@ export class chatService {
 				return await this.commands.channelPass(user, commands[1], channel);
 			case '/mode':
 				return await this.commands.userMode(user, commands[1], channel);
+			case '/invite':
+					return await this.commands.invite(user, commands[1], channel);
 			default:
 				return {messageData: null, error: 'Unknown command.'};
 		}

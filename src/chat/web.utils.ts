@@ -2,11 +2,18 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { posts, User } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 
+interface data {
+	name: string,
+	pictureUrl: string,
+	time: string,
+};
+
+
+
 @Injectable()
 export class webUtils{
 
     constructor(public prisma: PrismaService) {};
-
 
 	async createPost(user: User, postData: any) : Promise<{id: number, user: {fullName: string,  username: string, pictureUrl: string}, content: string, time: Date, likes: number, retweets: number }>{
 		const post = await this.prisma.posts.create({
@@ -113,5 +120,71 @@ export class webUtils{
 			  },
 		});
 		return posts;
+	}
+
+	async updateGame(user: User, gameHash: string): Promise<{ message: string | null, error: any }> {
+		const game = await this.prisma.game.findUnique({
+			where: {
+				hash: gameHash,
+			},
+		});
+		if (!game) {
+			return { message: null, error: `Game not found` };
+		}
+		let updatedGame;
+		if (game.leftPlayerId === 0) {
+			updatedGame = await this.prisma.game.update({
+				where: {
+					hash: gameHash,
+				},
+				data: {
+					leftPlayerId: user.id,
+				},
+			});
+		} else {
+			updatedGame = await this.prisma.game.update({
+				where: {
+					hash: gameHash,
+				},
+				data: {
+					rightPlayerId: user.id,
+				},
+			});
+		}
+		console.log(updatedGame);
+		return { message: `Game updated`, error: null };
+	}
+
+	async getFriendRequest(user: User) {
+		const requests = await this.prisma.friendRequest.findMany({
+			where: {
+				receiverId: user.id,
+			}
+		});
+		const userIds = [];
+		requests.forEach((request) => {
+			userIds.push(request.receiverId);
+		});
+		const users = await this.prisma.user.findMany({
+			where: {
+				id: {in: userIds},
+			}
+		});
+		let data: {
+			name: string,
+			pictureUrl: string,
+			time: string,
+		};
+
+		const notifications = [];
+		users.forEach((user) => {
+			let dat : data = {				
+				name: user.fullName,
+				pictureUrl:  user.pictureUrl,
+				time: "",
+			}
+			notifications.push(dat);
+		});
+		return notifications;
 	}
 }

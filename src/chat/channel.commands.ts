@@ -3,12 +3,14 @@ import { channels, PrismaClient, User } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
+import { GameService } from "src/game/game.service";
 
 
 
 @Injectable()
 export class channelCommands {
-    constructor(public prisma: PrismaService) {};
+    constructor(public prisma: PrismaService, public gameSerivce: GameService) {};
+	randomWords = require('random-words');
 
     async banUser(user: User, username: any, channel: channels) : Promise<{messageData:{ id: number, message: string, time: string}, error: string }> {
     const friend = await this.prisma.user.findUnique({
@@ -199,6 +201,27 @@ export class channelCommands {
             }
         } else {
             return {messageData : null, error : `No such a user: ${username}`};
+        }
+    }
+
+    async invite(user: User, username: string, channel: channels) :  Promise<any> {
+        const friend = await this.prisma.user.findUnique({
+            where: {
+                username,
+            }
+        });
+        if(friend) {
+            if (channel.userIds.includes(friend.id))  {
+				let gameName = this.randomWords({exactly: 9})[3];
+                const copyUser = {username: user.username, id: 0, played: user.played};
+                const game = await this.gameSerivce.createGame(copyUser,[gameName, 5, Math.round(Math.random()) + 1, true, 0]);
+                return { messageData: {id: game.hash.charCodeAt(5), message: `${user.username} has invited ${friend.username} to play pong game!`, gameHash: game.hash , time: Date.now().toLocaleString()}, error: null};
+            } else {
+                return {messageData : null, error :`User: ${username} not in the channel!`};
+            }
+        } else {
+            return {messageData : null, error : `No such a user: ${username}`};
+
         }
     }
 }

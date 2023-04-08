@@ -80,7 +80,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async addFriend(client: Socket, friendName: string) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.addFriend(user.id, friendName); // burada friende bir istek atabiliriz
+			const result = await this.chatService.addFriend(user.id, friendName);
 			if (result.message) {
 				client.emit('alert', result.message);
 				this.server.to(friendName).emit('alert', `You have new friend request.`);
@@ -89,6 +89,17 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('error on addFriend');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
+		}
+	}
+
+	@SubscribeMessage('friendRequests')
+	async friendRequests(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			return await this.webUtils.getFriendRequest(user);
+		} else {
+			console.log('user not found on friendList');
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
@@ -316,6 +327,23 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			}
 		} else {
 			console.log('user not found on profile');
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
+		}
+	}
+
+	@SubscribeMessage('startGame')
+	async startGame(client: Socket, gameHash: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.webUtils.updateGame(user, gameHash);
+			if (result.message) {
+				return result.message;
+			} else {
+				client.emit('alert', result.error);
+				return result.error;
+			}
+		} else {
+			console.log('user not found on startGame');
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}

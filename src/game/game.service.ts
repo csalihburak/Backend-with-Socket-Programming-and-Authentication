@@ -71,7 +71,7 @@ export class GameService {
 		return newGame;
 	}
 
-	async createGame(user: User, data: any[]): Promise<Game> {
+	async createGame(user: any, data: any[]): Promise<Game> {
 		let hash = crypto.createHash('sha256').update(data[0] + data[1] + '42&gamesuhdawuıdhıuwaghdıuyaw').digest('hex');
 		const game = await this.prisma.game.create({
 				data: {
@@ -91,7 +91,7 @@ export class GameService {
 			});
 		if (game) {
 			await this.prisma.user.update({
-				where: { id: user.id },
+				where: { username: user.username },
 				data: {
 					status: stat.IN_GAME,
 					played: user.played + 1,
