@@ -1,6 +1,6 @@
 import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Game, PrismaClient} from '@prisma/client';
+import { Game, PrismaClient, stat} from '@prisma/client';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
@@ -44,17 +44,17 @@ export class AuthService {
 
 	async sendValidationCode(req) {
 		try {
-			const user = await getSession(req.body.sessionToken, this.prisma);
-			if (user.two_factor_auth) {
+			const result = await getSession(req.body.sessionToken, this.prisma);
+			if (result.user.two_factor_auth) {
 				let validCode = Math.floor((Math.random() * 9999) + 1000);
 				await sendCode({
-					user: user,
+					user: result.user,
 					loginIp: req.ip.split(':')[3],
 					url: req,
 					browser: req.useragent.browser,
 
 				}, validCode, this.mailerService, this.prisma);
-				return JSON.stringify({status: 403, message: "Email sent succesfully.", email: user.email});
+				return JSON.stringify({status: 403, message: "Email sent succesfully.", email: result.user.email});
 			} else {
 				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."});
 			}
@@ -127,6 +127,14 @@ export class AuthService {
 				}
 			});
 			if (user) {
+				const updateUser = await this.prisma.user.update({
+					where: {
+						username: user.username
+					},
+					data: {
+						status: stat.ONLINE,
+					}
+				});
 				return JSON.stringify({status: 200, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`});
 			} else  {
 				return JSON.stringify({status: 404, message: "User not found"});
@@ -137,16 +145,17 @@ export class AuthService {
 	}
 
 	async logOut(sessionToken: string) {
-		const session = await getSession(sessionToken, this.prisma);
-		if (session.status === 200) {
+		const result = await getSession(sessionToken, this.prisma);
+		if (result.data.status === 200) {
+			let updateUser = await this.prisma.user.update({ where: {id: result.user.id}, data: {status: stat.OFFLINE }});
 			let deletedSession = await this.prisma.sessionToken.delete({
 				where: {
 					token: sessionToken,
 				}
 			});
-			return JSON.stringify({status: 200, message: `User ${session.user.username} has logged out successfully`});
+			return JSON.stringify({status: 200, message: `User ${result.user.username} has logged out successfully`});
 		} else {
-			return session.message;
+			return result.data.message;
 		}
 	}
 }

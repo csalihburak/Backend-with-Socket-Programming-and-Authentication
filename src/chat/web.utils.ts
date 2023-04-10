@@ -4,6 +4,7 @@ import { Injectable } from "@nestjs/common";
 
 interface data {
 	name: string,
+	username: string,
 	pictureUrl: string,
 	time: string,
 };
@@ -156,34 +157,39 @@ export class webUtils{
 	}
 
 	async getFriendRequest(user: User) {
+
+		const notifications = [];
+
 		const requests = await this.prisma.friendRequest.findMany({
 			where: {
 				receiverId: user.id,
 			}
 		});
 		const userIds = [];
-		requests.forEach((request) => {
-			userIds.push(request.receiverId);
+		requests.forEach((request, index) => {
+			let dat : data = {	
+				name: "",
+				pictureUrl:  "",
+				username: "",
+				time: request.time.toLocaleString(),
+			}
+			notifications[index] = dat;
+			userIds.push(request.senderId);
 		});
 		const users = await this.prisma.user.findMany({
 			where: {
 				id: {in: userIds},
 			}
 		});
-		let data: {
-			name: string,
-			pictureUrl: string,
-			time: string,
-		};
 
-		const notifications = [];
-		users.forEach((user) => {
-			let dat : data = {				
-				name: user.fullName,
-				pictureUrl:  user.pictureUrl,
-				time: "",
+		users.forEach((users, index) => {
+			let dat : data = {
+				name: users.fullName,
+				username: user.username,
+				pictureUrl:  users.pictureUrl,
+				time: notifications[index].time,
 			}
-			notifications.push(dat);
+			notifications[index] = dat;
 		});
 		return notifications;
 	}

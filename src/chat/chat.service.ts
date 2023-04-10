@@ -200,19 +200,23 @@ export class chatService {
 		if (friend) {
 			if (!friend.friends.includes(userId)) {
 				if (!friend.blockedUsers.includes(userId)) {
-					const friendRequest = await this.prisma.friendRequest.create({
-						data: {
+					const request = await this.prisma.friendRequest.findFirst({
+						where: {
 							senderId: userId,
-							receiverId: friend.id,
-						},
-					}).catch(error => {
-						if (error.code === 'P2002') {
-							return { message: null, error: `Friend request already been sent!` };
-						} else {
-							return { message: null, error: error };
+							receiverId: friend.id,							
 						}
 					});
-					return {message: `Friend request has been sent to ${friend.username}`, error : null};
+					if (!request) {
+						const friendRequest = await this.prisma.friendRequest.create({
+							data: {
+								senderId: userId,
+								receiverId: friend.id,
+							},
+						});
+						return {message: `Friend request has been sent to ${friend.username}`, error : null};
+					} else {
+						return {message: null, error : `Friend request already been sent!`};
+					}
 				} else {
 					return {message: null, error : `User: ${friend} has blocked you.`};
 				}
@@ -225,9 +229,9 @@ export class chatService {
 	}
 
 	async respondRequest(user: User, friendName: string, accept: boolean) {
-		const friend = await this.prisma.user.findUnique({
+		const friend = await this.prisma.user.findFirst({
 			where: {
-				username: friendName,
+				fullName: friendName
 			}
 		});
 		if (friend) {
@@ -238,13 +242,14 @@ export class chatService {
 				}
 			});
 			if (request) {
+				console.log(`I am printing this because I am testin this function only works for one time.`)
 				if (accept === true) {
 					const userUpdated = await this.prisma.user.update({
 						where: {
 							id: user.id,
 						},
 						data: {
-							friends: {push: user.id},
+							friends: {push: friend.id},
 						}
 					});
 					const friendUpdate = await this.prisma.user.update({
@@ -252,7 +257,7 @@ export class chatService {
 							id: friend.id,
 						},
 						data: {
-							friends: {push: friend.id},
+							friends: {push: user.id},
 						}
 					});
 					return {message: `User: ${friend.username} has been accepted your friend request.`, error: null};

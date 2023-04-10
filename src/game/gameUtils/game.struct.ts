@@ -66,8 +66,8 @@ function resetGame(game: gameStruct) {
 
 function createRandom(x: number, y: number) {
 	const rand = Math.floor(Math.random() * 3) + 1;
+	return (x *= y); 
 	if (rand == 0) {
-		return (x *= y); 
 	} else if (rand == 1) {
 		return (x += y);
 	} else {

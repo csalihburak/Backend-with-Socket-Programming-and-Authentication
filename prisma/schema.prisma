@@ -89,7 +89,7 @@ model friendRequest {
   id         Int      @id @default(autoincrement())
   senderId   Int
   receiverId Int
-  time       DateTime @default(now())
+  time       DateTime @default(dbgenerated("CURRENT_TIMESTAMP + INTERVAL '3 hours'"))
 
   @@map("friendRequests")
 }

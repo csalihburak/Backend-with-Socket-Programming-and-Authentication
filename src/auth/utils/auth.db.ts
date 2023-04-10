@@ -86,10 +86,12 @@ export async function check(body: any) {
 	else 
 		userInput.twoFacAuth = false;
 	userInput.username = body.username;
+
+	console.log(userInput);
   
-/*     const errors = await validate(userInput);
+     const errors = await validate(userInput);
   
-    if (errors.length > 0) {
+/*     if (errors.length > 0) {
       throw new BadRequestException(errors);
     } */
   
@@ -198,7 +200,7 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 	}
 }
 
-export async function getSession(token: string, prisma: PrismaService): Promise<any>{
+export async function getSession(token: string, prisma: PrismaService): Promise<{data: any, user: User}>{
 	console.log(token);
 	const session = await prisma.sessionToken.findFirst({
 		where: {
@@ -215,11 +217,11 @@ export async function getSession(token: string, prisma: PrismaService): Promise<
 		});
 		if (user) {
 			delete user.pass;
-			return JSON.stringify({ status: 200, user: user});
+			return  {data: JSON.stringify({ status: 200, user: user}), user: user};
 		} else {
-			return JSON.stringify({ status: 501, message: "Something went wrong."});
+			return {data: JSON.stringify({ status: 501, message: "Something went wrong."}), user: null};
 		}
 	} else {
-		return JSON.stringify({ status: 404, message: "Session not found."});
+		return {data: JSON.stringify({ status: 404, message: "Session not found."}), user: null};
 	}
 }

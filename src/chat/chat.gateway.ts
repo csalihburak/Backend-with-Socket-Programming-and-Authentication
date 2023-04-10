@@ -27,13 +27,16 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const sessionToken = client.handshake.query.sessionToken;
 		const user = await this.chatService.getUser(sessionToken);
 		if (user) {
-			this.users[client.id] = user;
-			client.join(user.username);
-			const channels = await this.chatService.getAllChannels(user.id);
-			channels.forEach((channel) => {
-				client.join(channel.channelName);
-			});
-			console.log(`client connected on chatGateway: ${user.username}`);
+			const userValues: User[] = Object.values(this.users);
+			if (!userValues.includes(user)) {
+				this.users[client.id] = user;
+				client.join(user.username);
+				const channels = await this.chatService.getAllChannels(user.id);
+				channels.forEach((channel) => {
+					client.join(channel.channelName);
+				});
+				console.log(`client connected on chatGateway: ${user.username}`);
+			}
 		} else {
 			console.log('Error! user not found on chatGateway connection');
 		}
@@ -82,10 +85,10 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const result = await this.chatService.addFriend(user.id, friendName);
 			if (result.message) {
-				client.emit('alert', result.message);
-				this.server.to(friendName).emit('alert', `You have new friend request.`);
+				client.emit('alert', {code: 'danger', message: result.message});
+				this.server.to(friendName).emit('alert', {code: 'info', message: `You have new friend request.`});
 			} else {
-				client.emit('alert', result.error);
+				client.emit('alert', {code: 'danger', message: result.error});
 			}
 		} else {
 			console.log('error on addFriend');
@@ -109,10 +112,11 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const response = await this.chatService.respondRequest(user, data.friendName, data.accept);
+			console.log(response);
 			if (response.message) {
-				client.emit('resposeRequest', response.message);
+				client.emit('alert', {code: 'success', message: response.message});
 			} else {
-				client.emit('alert', response.error);
+				client.emit('alert', {code: 'danger', message: response.error});
 			}
 		} else {
 			console.log('error on repondRequest');
@@ -168,7 +172,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
 				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time.toLocaleString() });
-				client.to(receiver.username).emit('alert', { code: 'danger', message: `you have a new message from ${user.username}`, });
+				client.to(receiver.username).emit('successs', { code: 'danger', message: `you have a new message from ${user.username}`, });
 				client.emit('privMessage', { id: message.id, sender: user.username, receiver: receiver.username, message: messageData.messageTxt, time: message.time.toLocaleString() });
 			} else {
 				console.log(error);
