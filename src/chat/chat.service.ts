@@ -45,10 +45,14 @@ export class chatService {
 			}
 		});
 		if (receiver) {
-			if(receiver.blockedUsers.includes(sender.id)) {
-				return {receiver: null, error: `user has been blocked by: ${receiver.username}`};
+			if (!sender.blockedUsers.includes(receiver.id)) {
+				if(receiver.blockedUsers.includes(sender.id)) {
+					return {receiver: null, error: `${receiver.username} blocked you:`};
+				}
+				return {receiver: receiver, error: null};
+			} else {
+				return {receiver: receiver, error: `You blocked ${receiver.username}`};
 			}
-			return {receiver: receiver, error: null};
 		}
 		return {receiver: null, error: "receiver not found!"};
 	}

@@ -44,7 +44,7 @@ export class GameUtilsGateway
 	async handleDisconnect(client: Socket) {
 		const user = this.users[client.id];
 		if (user) {
-			console.log(`client disconnected from chatGateway: ${user.username}`);
+			console.log(`client disconnected from gameGateway: ${user.username}`);
 			this.users[client.id] = null;
 		}
 	}

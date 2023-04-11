@@ -60,46 +60,51 @@ export class webUtils{
 		}
 	}
 
-	async profile(username: string) : Promise<{data: { img: string, friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
-		const user = await this.prisma.user.findUnique({
+	async profile(user: User, username: string) : Promise<{data: { img: string, friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
+		const friend = await this.prisma.user.findUnique({
 			where: {
 				username,
 			}
 		});
-		if (user) {
-			const friends = await this.prisma.user.findMany({
-				where: {
-					id: {in: user.friends},
+		if (friend) {
+			if (!friend.blockedUsers.includes(user.id)) {
+				const friends = await this.prisma.user.findMany({
+					where: {
+					id: {in: friend.friends},
 				},
 				select: {
 					status: true,
 					pictureUrl: true,
 					username: true,
 				}
-			});
-			const matchHistory = await this.prisma.gameHistory.findMany({
-				where: {
-					OR: [
-						{leftPlayer: user.username},
-						{rightPlayer: user.username},
-					],
-				},
-			});
-			const posts = await this.prisma.posts.findMany({
-				where: {
-					userId: user.id,
-				},
-				include: {
-					user: {
-					  select: {
-						username: true,
-						fullName: true,
-						pictureUrl: true,
-					  },
+				});
+				const matchHistory = await this.prisma.gameHistory.findMany({
+					where: {
+						OR: [
+							{leftPlayer: friend.username},
+							{rightPlayer: friend.username},
+						],
 					},
-				  },
-			});
-			return {data: {img: user.pictureUrl, friends: friends, matchHistory: matchHistory, achievements: user.achievements, posts: posts, stats: {win: user.won, lost: user.lost, point: user.point} }, error: null}
+				});
+				const posts = await this.prisma.posts.findMany({
+					where: {
+						userId: friend.id,
+					},
+					include: {
+						user: {
+							select: {
+							username: true,
+							fullName: true,
+							pictureUrl: true,
+						},
+						},
+					},
+				});
+				return {data: {img: friend.pictureUrl, friends: friends, matchHistory: matchHistory, achievements: friend.achievements, posts: posts, stats: {win: friend.won, lost: friend.lost, point: friend.point} }, error: null}
+			} {
+				return {data: null, error: null}
+
+			}
 		} else {
 			return {data: null, error : `No such a user: ${username}`};
 		}
@@ -171,5 +176,27 @@ export class webUtils{
 			notifications[index] = value;
 		});
 		return notifications;
+	}
+
+	async blockUser(user: User, friendName: string) : Promise<{message: string, error: any}> {
+		const friend = await this.prisma.user.findUnique({
+			where: { username: friendName }
+		});
+		if (friend) {
+			if(!user.blockedUsers.includes(friend.id)) {
+				user.friends.splice(friend.id, 1);
+				user.blockedUsers.push(friend.id);
+				const updatedUser = await this.prisma.user.update({
+					where: { id: user.id},
+					data: { blockedUsers: { push: friend.id }, friends: {set: user.friends}}
+				});
+				return {message: `'${friend.username}' has been blocked`, error: null};
+			} else {
+				return {message: null, error: `'${friendName}' already blocked`};
+			}
+		} else {
+			return {message: null, error: `No such a user: ${friendName}`}
+		}
+		return
 	}
 }

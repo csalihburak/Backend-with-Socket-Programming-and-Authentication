@@ -45,7 +45,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	handleDisconnect(client: Socket) {
 		const user = this.users[client.id];
 		if (user) {
-			console.log(`client disconnected: ${user.username}`);
+			console.log(`client disconnected from chatGateway: ${user.username}`);
 			this.users[client.id] = null;
 		}
 	}
@@ -85,13 +85,29 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const result = await this.chatService.addFriend(user.id, friendName);
 			if (result.message) {
-				this.server.to(user.username).emit('alert', {code: 'danger', message: result.message});
+				this.server.to(user.username).emit('alert', {code: 'success', message: result.message});
 				this.server.to(friendName).emit('alert', {code: 'info', message: `You have new friend request.`});
 			} else {
 				this.server.to(user.username).emit('alert', {code: 'danger', message: result.error});
 			}
 		} else {
-			console.log('error on addFriend');
+			this.server.to(client.id).emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
+		}
+	}
+
+	@SubscribeMessage('blockUser')
+	async blockUser(client: Socket, friendName: string) {
+		const user = this.users[client.id];
+		if (user) {
+			const result = await this.webUtils.blockUser(user, friendName);
+			if (result.message) {
+				console.log(user.friends);
+				console.log(user.blockedUsers);
+				this.server.to(user.username).emit('alert', {code: 'info', message: result.message});
+			} else {
+				this.server.to(user.username).emit('alert', {code: 'danger', message: result.error});
+			}
+		} else {
 			this.server.to(client.id).emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
 		}
 	}
@@ -172,10 +188,10 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 			if (receiver) {
 				const message = await this.chatService.addMessageTodb({ sender: user.id, receiver: receiver.id, message: messageData.messageTxt })
 				client.to(receiver.username).emit('privMessage', { sender: user.username, message: messageData.messageTxt, time: message.time });
-				client.to(receiver.username).emit('successs', { code: 'danger', message: `you have a new message from ${user.username}`, });
+				client.to(receiver.username).emit('alert', { code: 'success', message: `you have a new message from ${user.username}`, });
 				this.server.to(user.username).emit('privMessage',  { sender: user.username, message: messageData.messageTxt, time: message.time });
 			} else {
-				console.log(error);
+				this.server.to(user.username).emit('alert',  { code: 'danger', message: error });
 			}
 		} else {
 			console.log('user not found on privmsg');
@@ -322,10 +338,12 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async achievements(client: Socket, username: string) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.webUtils.profile(username);
+			const result = await this.webUtils.profile(user, username);
 			if (result.data) {
 				return result.data;
-			} else {
+			} else if (!result.data && result.error) {
+				return null;
+			}else {
 				this.server.to(user.username).emit('alert', result.error);
 			}
 		} else {
