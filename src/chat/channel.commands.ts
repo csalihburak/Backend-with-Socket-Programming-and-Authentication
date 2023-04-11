@@ -205,11 +205,7 @@ export class channelCommands {
     }
 
     async invite(user: User, username: string, channel: channels) :  Promise<any> {
-        const friend = await this.prisma.user.findUnique({
-            where: {
-                username,
-            }
-        });
+        const friend = await this.prisma.user.findUnique({ where: { username, } });
         if(friend) {
             if (channel.userIds.includes(friend.id))  {
 				let gameName = this.randomWords({exactly: 9})[3];

@@ -6,21 +6,6 @@ import { chatUtils } from "./chat.utils";
 import * as cryptojs from 'crypto-js';
 import * as crypto from 'crypto';
 
-interface messageStruct {
-	id: number,
-	sender: string,
-	receiver: string,
-	message: string,
-	time: any,
-};
-
-interface channelMessages {
-	id: number,
-	sender: string,
-	message: string,
-	time: any,
-}
-
 
 @Injectable()
 export class chatService {
@@ -218,10 +203,10 @@ export class chatService {
 						return {message: null, error : `Friend request already been sent!`};
 					}
 				} else {
-					return {message: null, error : `User: ${friend} has blocked you.`};
+					return {message: null, error : `${friend.fullName} has blocked you.`};
 				}
 			} else {
-				return {message: null, error : `User: ${friend} already your friend.`};
+				return {message: null, error : `${friend.fullName} already your friend.`};
 			}
 		} else {
 			return {message: null, error : `No such a user: ${friend}`};
@@ -229,9 +214,9 @@ export class chatService {
 	}
 
 	async respondRequest(user: User, friendName: string, accept: boolean) {
-		const friend = await this.prisma.user.findFirst({
+		const friend = await this.prisma.user.findUnique({
 			where: {
-				fullName: friendName
+				username: friendName
 			}
 		});
 		if (friend) {
@@ -260,6 +245,7 @@ export class chatService {
 							friends: {push: user.id},
 						}
 					});
+					await this.prisma.friendRequest.delete({ where: { id: request.id, } });
 					return {message: `User: ${friend.username} has been accepted your friend request.`, error: null};
 				} else {
 					return {message: `User: ${friend.username} has rejected your friend request.`, error: null};

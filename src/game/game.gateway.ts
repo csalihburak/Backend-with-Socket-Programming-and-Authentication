@@ -139,7 +139,7 @@ export class GameUtilsGateway
 							});
 							this.games.splice(i, 1);
 							this.server.emit('updateGames', this.games);
-							this.server.emit('playerLeft', [user.username, 0]);
+							this.server.emit('playerLeft', [user.username, 1]);
 							return await this.prisma.game.delete({where: {id: game.id}});
 						}
 					}

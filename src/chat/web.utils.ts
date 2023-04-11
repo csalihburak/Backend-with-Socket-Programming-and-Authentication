@@ -157,39 +157,18 @@ export class webUtils{
 	}
 
 	async getFriendRequest(user: User) {
-
 		const notifications = [];
-
-		const requests = await this.prisma.friendRequest.findMany({
-			where: {
-				receiverId: user.id,
-			}
-		});
+		const requests = await this.prisma.friendRequest.findMany({ where: { receiverId: user.id, } });
 		const userIds = [];
 		requests.forEach((request, index) => {
-			let dat : data = {	
-				name: "",
-				pictureUrl:  "",
-				username: "",
-				time: request.time.toLocaleString(),
-			}
+			let dat : data = {	 name: "", pictureUrl:  "", username: "", time: request.time.toLocaleString(), }
 			notifications[index] = dat;
 			userIds.push(request.senderId);
 		});
-		const users = await this.prisma.user.findMany({
-			where: {
-				id: {in: userIds},
-			}
-		});
-
+		const users = await this.prisma.user.findMany({ where: { id: {in: userIds}, } });
 		users.forEach((users, index) => {
-			let dat : data = {
-				name: users.fullName,
-				username: user.username,
-				pictureUrl:  users.pictureUrl,
-				time: notifications[index].time,
-			}
-			notifications[index] = dat;
+			let value : data = { name: users.fullName, username: users.username, pictureUrl:  users.pictureUrl, time: notifications[index].time, }
+			notifications[index] = value;
 		});
 		return notifications;
 	}
