@@ -69,7 +69,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const result = await this.utils.getFriends(user);
 			if (result) {
-				this.server.to(user.username).emit('friendList', { channels: result.channels, friends: result.friends });
+				return  { channels: result.channels, friends: result.friends };
 			} else {
 				this.server.to(user.username).emit('alert', 'There is a error while getting the friendList');
 			}
@@ -101,8 +101,6 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const result = await this.webUtils.blockUser(user, friendName);
 			if (result.message) {
-				console.log(user.friends);
-				console.log(user.blockedUsers);
 				this.server.to(user.username).emit('alert', {code: 'info', message: result.message});
 			} else {
 				this.server.to(user.username).emit('alert', {code: 'danger', message: result.error});
@@ -128,7 +126,6 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const response = await this.chatService.respondRequest(user, data.friendName, data.accept);
-			console.log(response);
 			if (response.message) {
 				this.server.to(data.friendName).emit('alert', {code: 'success', message: response.message});
 			} else {
@@ -267,7 +264,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 						break;
 					case 2 :
 						let time = await this.utils.getTime(user.id, channel);
-						this.server.to(user.username).emit('alert', {code: 'info', message: `You have been muted until ${time}.`});
+						this.server.to(user.username).emit('alert', {code: 'info', message: `You have been muted from ' ${channel.channelName} ' until ${time}.`});
 						break;
 					case 3 :
 						this.server.to(user.username).emit('alert', {code: 'info', message: `You have been banned from this channel.`});

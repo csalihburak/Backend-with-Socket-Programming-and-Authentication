@@ -184,11 +184,14 @@ export class webUtils{
 		});
 		if (friend) {
 			if(!user.blockedUsers.includes(friend.id)) {
-				user.friends.splice(friend.id, 1);
+				let id = user.friends.indexOf(friend.id);
+				if (id != -1) {
+					user.friends.splice(id, 1);
+				}
 				user.blockedUsers.push(friend.id);
 				const updatedUser = await this.prisma.user.update({
 					where: { id: user.id},
-					data: { blockedUsers: { push: friend.id }, friends: {set: user.friends}}
+					data: { blockedUsers: { push: friend.id }, friends: user.friends}
 				});
 				return {message: `'${friend.username}' has been blocked`, error: null};
 			} else {

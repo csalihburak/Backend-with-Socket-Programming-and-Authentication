@@ -250,7 +250,7 @@ export class chatService {
 						}
 					});
 					await this.prisma.friendRequest.delete({ where: { id: request.id, } });
-					return {message: `User: ${friend.username} has been accepted your friend request.`, error: null};
+					return {message: `User: ${user.username} has been accepted your friend request.`, error: null};
 				} else {
 					return {message: `User: ${friend.username} has rejected your friend request.`, error: null};
 				}
