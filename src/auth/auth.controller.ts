@@ -2,9 +2,7 @@ import { Controller, Get, Post, Query, UseInterceptors, UploadedFile, Req, Res} 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
-import { getSession } from './utils';
 import { diskStorage } from 'multer';
-import * as crypto from 'crypto-js';
 import { extname } from 'path';
 import * as Jimp from 'jimp';
 
@@ -20,7 +18,7 @@ export class AuthController {
 		const parse= JSON.parse(response);
 		if (parse.status == 200) {
 			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
-		} else {
+		} else{
 			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${parse.token}`);
 		}
 		res.end();

@@ -18,17 +18,12 @@ export class GameService {
 			if (session) {
 				const userId = session.userId;
 				const user = await this.prisma.user.findUnique({
-						where: {
-							id: userId,
-						},
-					}).catch((error) => {
-						console.log(error);
-					});
-				if (user) {
-					return user;
-				}
+					where: {
+						id: userId,
+					},
+				});
+				return user;
 			} else {
-				console.log('Session not found');
 				return null;
 			}
 		}

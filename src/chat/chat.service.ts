@@ -1,5 +1,5 @@
 import { PrismaService } from "src/prisma/prisma.service";
-import { channels, User } from "@prisma/client";
+import { channels, stat, User } from "@prisma/client";
 import { channelCommands } from './channel.commands';
 import { Injectable } from "@nestjs/common";
 import { chatUtils } from "./chat.utils";
@@ -14,24 +14,16 @@ export class chatService {
 	async getUser(sessionToken: any) : Promise<User> {
 		if (sessionToken) {
 			const session = await this.prisma.sessionToken.findFirst({
-				where: {
-					token: sessionToken,
-				},
+				where: { token: sessionToken, },
 			});
 			if (session) {
 				const userId = session.userId;
 				const user = await this.prisma.user.findUnique({
-						where: {
-							id: userId,
-						},
-					}).catch((error) => {
-						console.log(error);
-					});
-				if (user) {
-					return user;
-				}
+					where: { id: userId },
+				});
+				const updatedUser = await this.updateUser(user.id);
+				return user;
 			} else {
-				console.log('Session not found');
 				return null;
 			}
 		}
@@ -180,40 +172,44 @@ export class chatService {
 		}
 	}
 
-	async addFriend(userId: number, friendName: string) : Promise<{message: string, error: any}> {
+	async addFriend(user: User, friendName: string) : Promise<{message: string, error: any}> {
 		const friend = await this.prisma.user.findUnique({
 			where: {
 				username: friendName,
 			}
 		});
 		if (friend) {
-			if (!friend.friends.includes(userId)) {
-				if (!friend.blockedUsers.includes(userId)) {
-					const request = await this.prisma.friendRequest.findFirst({
-						where: {
-							senderId: userId,
-							receiverId: friend.id,							
-						}
-					});
-					if (!request) {
-						const friendRequest = await this.prisma.friendRequest.create({
-							data: {
-								senderId: userId,
-								receiverId: friend.id,
-							},
+			if (!user.blockedUsers.includes(friend.id)) {
+				if (!friend.friends.includes(user.id)) {
+					if (!friend.blockedUsers.includes(user.id)) {
+						const request = await this.prisma.friendRequest.findFirst({
+							where: {
+								senderId: user.id,
+								receiverId: friend.id,							
+							}
 						});
-						return {message: `Friend request has been sent to ${friend.username}`, error : null};
+						if (!request) {
+							const friendRequest = await this.prisma.friendRequest.create({
+								data: {
+									senderId: user.id,
+									receiverId: friend.id,
+								},
+							});
+							return {message: `Friend request has been sent to ${friend.username}`, error : null};
+						} else {
+							return {message: null, error : `Friend request already been sent!`};
+						}
 					} else {
-						return {message: null, error : `Friend request already been sent!`};
+						return {message: null, error : `${friend.fullName} has blocked you.`};
 					}
 				} else {
-					return {message: null, error : `${friend.fullName} has blocked you.`};
+					return {message: null, error : `${friend.fullName} already your friend.`};
 				}
 			} else {
-				return {message: null, error : `${friend.fullName} already your friend.`};
+				return {message: null, error : `You blocked this user '${friend.username}'`};
 			}
 		} else {
-			return {message: null, error : `No such a user: ${friend}`};
+			return {message: null, error : `No such a user: ${friendName}`};
 		}
 	}
 
@@ -258,7 +254,7 @@ export class chatService {
 				return {message: null, error : `No such a request`};
 			}
 		} else {
-			return {message: null, error : `No such a user: ${friend}`};
+			return {message: null, error : `No such a user: ${friendName}`};
 		}
 	}
 
@@ -291,4 +287,6 @@ export class chatService {
 		});
 		return users;
 	}
+
+	async updateUser(userId: number) { const updatedUser = await this.prisma.user.update({ where: { id: userId }, data: { status: "ONLINE"} }); }
 }

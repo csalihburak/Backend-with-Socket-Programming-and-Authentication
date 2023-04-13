@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "friendRequests" ALTER COLUMN "time" SET DEFAULT CURRENT_TIMESTAMP + INTERVAL '3 hours';

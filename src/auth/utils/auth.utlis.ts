@@ -30,17 +30,13 @@ export async function sendCode(data: any, validCode: number, mailerService: Mail
 				email: user.email,
 				expired_date: expiredDate,
 			},
-		})
+		});
 		const deleted = await prisma.validate.deleteMany({
 			where: {
-					userId: user.id,
-			  NOT: [
-				{
-					validcode: validCode,
-				},
-			  ],
+				userId: user.id,
+				NOT: [ { validcode: validCode, }, ],
 			},
-		  });
+		});
 	})
 	.catch((error) => {
 		throw error;

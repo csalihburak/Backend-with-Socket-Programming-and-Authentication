@@ -42,9 +42,10 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		}
 	}
 
-	handleDisconnect(client: Socket) {
+	async handleDisconnect(client: Socket) {
 		const user = this.users[client.id];
 		if (user) {
+			const updatedUser = await this.chatService.updateUser(user.id);
 			console.log(`client disconnected from chatGateway: ${user.username}`);
 			this.users[client.id] = null;
 		}
@@ -83,7 +84,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 	async addFriend(client: Socket, friendName: string) {
 		const user = this.users[client.id];
 		if (user) {
-			const result = await this.chatService.addFriend(user.id, friendName);
+			const result = await this.chatService.addFriend(user, friendName);
 			if (result.message) {
 				this.server.to(user.username).emit('alert', {code: 'success', message: result.message});
 				this.server.to(friendName).emit('alert', {code: 'info', message: `You have new friend request.`});

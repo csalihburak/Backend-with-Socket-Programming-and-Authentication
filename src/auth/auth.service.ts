@@ -65,7 +65,6 @@ export class AuthService {
 
 	async validateCode(req) {
 		try {
-			console.log(req.body);
 			if (!req.body.email) {
 				return JSON.stringify({status: 403, message: "Mail adresini kontrol ediniz."})
 			} else if (!req.body.code) {

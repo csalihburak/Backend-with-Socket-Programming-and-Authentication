@@ -36,8 +36,8 @@ export class GameUtilsGateway
 			client.emit('updateGames', this.games);
 			console.log(`client connected on gameGateway: ${user.username}`);
 		} else {
-			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
-			console.log('Error! user not found on connection');
+			//client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
+			console.log('Error! user not found on gameGateway connection');
 		}
 	}
 

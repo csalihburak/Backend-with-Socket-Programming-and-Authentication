@@ -9,144 +9,107 @@ import * as crypto from 'crypto';
 
 export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient) {
     const sessionToken = crypto.randomBytes(32).toString('hex');
-    const loginIp = req.ip.split(':')[3];
-  
+    const loginIp = req.ip.split(':')[3];  
     try {
       const res = await Prisma.$transaction(async (tx) => {
-        const user = await prisma.user.findUnique({
-          where: {
-            email: info.email,
-          },
-        });
-        if (!user) {
-          const user = await prisma.user.create({
-            data: {
-              username: info.username,
-              pass: info.password,
-              email: info.email,
-              fullName: info.fullName,
-              coalition: info.coalition,
-              two_factor_auth: false,
-              pictureUrl: info.pictureUrl,
-            },
-          });
-  
-          const tokenCreated = await prisma.sessionToken.create({
-            data: {
-              userId: user.id,
-              loginIp,
-              token: sessionToken,
-            },
-          });
-  
-          throw JSON.stringify({
-            status: 203,
-            message: 'User created without password',
-            token: tokenCreated.token,
-			imageUrl: info.pictureUrl
-          });
-        } else {
-          const tokenCreated = await prisma.sessionToken.create({
-            data: {
-              userId: user.id,
-              loginIp,
-              token: sessionToken,
-            },
-          });
-  
-          if (user.pass === '') {
-            throw JSON.stringify({
-              status: 401,
-              message: 'user exist without password',
-              token: tokenCreated.token,
-				imageUrl: info.pictureUrl
-            });
-          } else {
-            throw JSON.stringify({
-              status: 200,
-              token: tokenCreated.token,
-			  twoFacAuth: user.two_factor_auth,
-            });
-          }
-        }
-      });
-    } catch (error) {
-      throw error;
-    } finally {
+        	const user = await prisma.user.findUnique({
+				where: {
+					email: info.email,
+				},
+			});
+        	if (!user) {
+				const user = await prisma.user.create({
+					data: {
+					username: info.username,
+					pass: info.password,
+					email: info.email,
+					fullName: info.fullName,
+					coalition: info.coalition,
+					two_factor_auth: false,
+					pictureUrl: info.pictureUrl,
+					},
+				});
+				const tokenCreated = await prisma.sessionToken.create({
+					data: {
+						userId: user.id,
+						loginIp,
+						token: sessionToken,
+					},
+				});
+        	  	throw JSON.stringify({ status: 203, message: 'User created without password', token: tokenCreated.token, imageUrl: info.pictureUrl});
+        	} else {
+				const tokenCreated = await prisma.sessionToken.create({
+					data: { 
+						userId: user.id, 
+						loginIp, 
+						token: sessionToken,
+        	    	},
+				});
+				if (user.pass === '') {
+					throw JSON.stringify({ status: 401, message: 'user exist without password', token: tokenCreated.token, imageUrl: info.pictureUrl});
+				} else {
+					throw JSON.stringify({ status: 200, token: tokenCreated.token, twoFacAuth: user.two_factor_auth });
+				}
+			}
+		});
+	} catch (error) {
+		throw error;
+	} finally {
 		await Prisma.$disconnect();
-	  }
-  }
+	}
+}
   
 export async function check(body: any) {
-    const userInput = new UserInputDto();
-    userInput.password = body.password;
-    userInput.sessionToken = body.sessionToken;
+	const userInput = new UserInputDto();
+	userInput.password = body.password;
+	userInput.sessionToken = body.sessionToken;
 	if (body.twoFacAuth == "true")
-    	userInput.twoFacAuth = true;
+		userInput.twoFacAuth = true;
 	else 
 		userInput.twoFacAuth = false;
 	userInput.username = body.username;
 
-	console.log(userInput);
-  
-     const errors = await validate(userInput);
-  
-/*     if (errors.length > 0) {
-      throw new BadRequestException(errors);
-    } */
-  
-    return userInput;
+	const errors = await validate(userInput);
+	if (errors.length > 0) {
+		throw new BadRequestException(errors);
+	}
+	return userInput;
   }
 
   export async function validateUser(body: any, file: Express.Multer.File, prisma: PrismaService, prismaClient: PrismaClient) {
 	try {
-	  const res = await prismaClient.$transaction(async () => {
 		const token = await prisma.sessionToken.findFirst({
-		  where: {
-			token: body.sessionToken,
-		  },
+			where: { token: body.sessionToken, }, 
 		});
 		if (!token) {
-		  return JSON.stringify({ status: 403, message: "Session not found." });
+			return JSON.stringify({ status: 403, message: "Session not found." });
 		}
-  
-		const user = await prisma.user.findUnique({
-		  where: { id: token.userId },
-		  select: { pass: true },
+		const user = await prisma.user.findUnique({ 
+			where: { id: token.userId }, select: { pass: true },
 		});
 		if (user.pass) {
-		  return JSON.stringify({ status: 200 });
+			return JSON.stringify({ status: 200 });
 		}
   
 		const password = crypto.createHash('sha256').update(body.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
-  
-		const data: any = {
-		  pass: password,
-		  two_factor_auth: body.info.twoFacAuth,
-		  username: body.info.username,
-		};
-		if (file) {
-		  data.pictureUrl = file.path;
-		}
-  
+
+		const data: any = { pass: password, two_factor_auth: body.info.twoFacAuth, username: body.info.username };
+		if (file)
+			data.pictureUrl = file.path;
 		try {
-		  const updated = await prisma.user.update({
-			where: { id: token.userId },
-			data,
-		  });
-		  return JSON.stringify({ status: 200, message: `${body.username} saved successfully.` });
+			const updated = await prisma.user.update({
+				where: { id: token.userId },
+				data,
+			});
+			return JSON.stringify({ status: 200, message: `${body.username} saved successfully.` });
 		} catch (error) {
-		  if (error.code === 'P2002') {
-			return JSON.stringify({ status: 403, message: `Username ${body.username} already exists.` });
-		  }
-		  throw error;
+			if (error.code === 'P2002') {
+				return JSON.stringify({ status: 403, message: `Username ${body.username} already exists.` });
+			}
+			throw error;
 		}
-	  });
-	  return res;
 	} catch (error) {
-	  return error;
-	} finally {
-	  await prismaClient.$disconnect();
+		return error;
 	}
 }
 
@@ -201,7 +164,6 @@ export async function userCheck(req: Request, prisma: PrismaService) {
 }
 
 export async function getSession(token: string, prisma: PrismaService): Promise<{data: any, user: User}>{
-	console.log(token);
 	const session = await prisma.sessionToken.findFirst({
 		where: {
 			token: token,
