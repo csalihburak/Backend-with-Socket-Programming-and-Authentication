@@ -7,10 +7,6 @@ import { Server, Socket } from 'socket.io';
 import { Prisma } from '@prisma/client';
 import { Logger } from '@nestjs/common';
 
-
-
-
-
 @WebSocketGateway({ namespace: '/socket/gameUtils' })
 export class GameUtilsGateway 
 {
@@ -139,7 +135,7 @@ export class GameUtilsGateway
 							});
 							this.games.splice(i, 1);
 							this.server.emit('updateGames', this.games);
-							this.server.emit('playerLeft', [user.username, 1]);
+							this.server.emit('playerLeft', [user.username, 0]);
 							return await this.prisma.game.delete({where: {id: game.id}});
 						}
 					}

@@ -109,7 +109,7 @@ export class AuthService {
 
 	}
 
-	async getUser(sessionToken: any) {
+	async getUser(sessionToken: any) : Promise<any> {
 		const session = await this.prisma.sessionToken.findFirst({
 			where: {
 				token: sessionToken,
@@ -155,6 +155,23 @@ export class AuthService {
 			return JSON.stringify({status: 200, message: `User ${result.user.username} has logged out successfully`});
 		} else {
 			return result.data.message;
+		}
+	}
+
+	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) {
+		const user = await this.getUser(sessionToken);
+		if (user) {
+
+			const updatedUser = await this.prisma.user.update({
+				where: {
+					username: user.username,
+				},
+				data: {
+					
+				}
+			})
+		} else {
+			return (JSON.stringify({status: 404, message: "User not found"}));
 		}
 	}
 }

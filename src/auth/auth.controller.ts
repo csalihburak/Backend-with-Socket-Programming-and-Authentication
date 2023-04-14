@@ -40,6 +40,7 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+		console.log(req.body);
 		Jimp.read(file.path, (err, lenna) => {
 			if (err) throw err;
 			lenna
@@ -47,7 +48,9 @@ export class AuthController {
 			  .quality(100)
 			  .write(file.path);
 		  });
-		return this.authService.singup(req.body, file);
+		const result =  await this.authService.singup(req.body, file);
+		console.log(result);
+		return result;
 	}
 
 	@Post('signin')
@@ -121,4 +124,28 @@ export class AuthController {
 		const sessionToken : any = req.query.sessionToken;
 		return await this.authService.logOut(sessionToken);
 	}
+
+	@Post('updateUser')
+	@UseInterceptors(
+		FileInterceptor('avatar', {
+			storage: diskStorage({
+				destination: './public/images',
+				filename: (req, file, callback) => {
+					const uniqsuffix = Date.now() + '-' + Math.round(Math.random() + 1e9);
+					const ext = extname(file.originalname);
+					const filename = `${file.originalname}-${uniqsuffix}${ext}`;
+					callback(null, filename);
+				},
+			}),
+		}),
+	)
+	async updateUser(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
+		const sessionToken: any = req.query.sessionToken;
+		if (sessionToken) {
+			const result = await this.authService.updateUser(file, sessionToken, req.body);
+		} else {
+			return (JSON.stringify({status: 203, message: "Sessiontoken not found"}));
+		}
+	}
+
 }

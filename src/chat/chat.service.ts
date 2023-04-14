@@ -21,7 +21,9 @@ export class chatService {
 				const user = await this.prisma.user.findUnique({
 					where: { id: userId },
 				});
-				const updatedUser = await this.updateUser(user.id);
+				let updatedUser: any = 0;
+				if (user)
+					updatedUser = await this.updateUser(user.id);
 				return user;
 			} else {
 				return null;

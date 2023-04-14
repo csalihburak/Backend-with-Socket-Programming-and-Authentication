@@ -70,9 +70,9 @@ export async function check(body: any) {
 	userInput.username = body.username;
 
 	const errors = await validate(userInput);
-	if (errors.length > 0) {
+/* 	if (errors.length > 0) {
 		throw new BadRequestException(errors);
-	}
+	} */
 	return userInput;
   }
 
