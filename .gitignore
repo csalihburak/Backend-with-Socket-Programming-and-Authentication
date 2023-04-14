@@ -11,6 +11,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+./public/images
+./public/chatImages
+
 ./avatar
 # OS
 .DS_Store
