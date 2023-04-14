@@ -31,8 +31,6 @@ export class AuthDto {
 }
 
 export class UserInputDto {
-	@IsNotEmpty({ message: 'Token is not given.' })
-	sessionToken: string;
 
 	@IsNotEmpty({ message: 'Password can not be empty.' })
 	@Matches(/^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,}$/, {

@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as Jimp from 'jimp';
+import { FlagFilled } from '@ant-design/icons';
 
 @Controller('auth')
 export class AuthController {
@@ -12,17 +13,16 @@ export class AuthController {
 
 	@Get('intra42')
 	async firstInsert(@Query() query, @Req() req: Request, @Res() res: Response) {
-		if (!query.code)
-			return JSON.stringify({ status: 404, message: 'Auth token is not given' });
+		if (!query.code) {
+			return { status: 404, message: 'Auth token is not given' };
+		}
 		const response = await this.authService.intraGet(query.code, req);
-		const parse= JSON.parse(response);
-		if (parse.status == 200) {
-			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${parse.token}&twoFacAuth=${parse.twoFacAuth}`);
+		if (response.status == 200) {
+			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${response.sessionToken}&twoFacAuth=${response.twoFacAuth}`);
 		} else{
-			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${parse.token}`);
+			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${response.sessionToken}`);
 		}
 		res.end();
-		return;
 	}
 
 	@Post('signup')
@@ -40,35 +40,40 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-		console.log(req.body);
-		Jimp.read(file.path, (err, lenna) => {
-			if (err) throw err;
+		if (file.size > 800) {
+			return({ body: { url: "Image size can not be more than 8 MB." }});			
+		} else {
+			Jimp.read(file.path, (err, lenna) => {
+				if (err) throw err;
 			lenna
 			  .resize(256, 256) 
 			  .quality(100)
 			  .write(file.path);
 		  });
-		const result =  await this.authService.singup(req.body, file);
-		console.log(result);
-		return result;
+		  const result =  await this.authService.singup(req.body, file);
+		  console.log(result);
+		  return result;
+		}
 	}
 
 	@Post('signin')
 	async signin(@Req() req: Request, @Res() res: Response) {
 		const result = await this.authService.signIn(req);
-		const parse = JSON.parse(result);
-		if (parse.status == 200) {
-			res.send(JSON.stringify({status: parse.status, sessionToken: parse.token, twoFacAuth: parse.twoFacAuth}));
+		if (result.status == 200) {
+			res.send({status: result.status, sessionToken: result.sessionToken, twoFacAuth: result.twoFacAuth});
 		} else {
-			console.log(parse);
-			res.send(JSON.stringify({status: parse.status, mesage: parse.message}));
+			console.log(result);
+			res.send({status: result.status, mesage: result.message});
 		}
 	}
 
 	@Get('user')
 	async user(@Req() req: Request) {
 		const sessionToken = req.query.sessionToken;
-		return this.authService.getUser(sessionToken);
+		const result = await this.authService.getUser(sessionToken);
+		if(result.status == 200) {
+			return {status: 200, userName: result.user.username, pictureUrl: `http://64.226.65.83:3000${result.user.pictureUrl}`};
+		}
 	}
 
 	@Get('leaderBoard')
@@ -103,20 +108,16 @@ export class AuthController {
 		}),
 	)
 	async uploadFile(@UploadedFile() file: Express.Multer.File , @Res() res: Response){
-		Jimp.read(file.path, (err, lenna) => {
-			if (err) throw err;
-			lenna
-			  .resize(256, 256) 
-			  .quality(100)
-			  .write(file.path);
-		  });
-		const url = file.path;
-		res.send({
-			body: {
-				url: url,
-			}
-		});
-		res.end();
+		if (file.size > 800) {
+			return({ body: { url: "Image size can not be more than 8 MB." }});
+		} else {
+			Jimp.read(file.path, (err, lenna) => {
+				if (err) throw err;
+				lenna.resize(256, 256) .quality(100).write(file.path);
+			});
+			const url = file.path;
+			return ({ body: { url: url }});
+		}
 	}
 
 	@Post('logout')
@@ -127,7 +128,7 @@ export class AuthController {
 
 	@Post('updateUser')
 	@UseInterceptors(
-		FileInterceptor('avatar', {
+		FileInterceptor('file', {
 			storage: diskStorage({
 				destination: './public/images',
 				filename: (req, file, callback) => {
@@ -140,11 +141,16 @@ export class AuthController {
 		}),
 	)
 	async updateUser(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-		const sessionToken: any = req.query.sessionToken;
-		if (sessionToken) {
-			const result = await this.authService.updateUser(file, sessionToken, req.body);
+		if (file.size > 800) {
+			return({ status: 403, message: "Image size can not be more than 8 MB." });
 		} else {
-			return (JSON.stringify({status: 203, message: "Sessiontoken not found"}));
+			const sessionToken: any = req.query.sessionToken;
+			if (sessionToken) {
+				const result = await this.authService.updateUser(file, sessionToken, req.body);
+				return result;
+			} else {
+				return ({status: 203, message: "Sessiontoken not found"});
+			}
 		}
 	}
 

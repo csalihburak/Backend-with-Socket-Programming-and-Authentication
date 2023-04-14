@@ -24,7 +24,7 @@ export async function parseData(data: object, coalition: string) {
 	return dto;
 }
 
-export async function getUserData(code: string): Promise<any> {
+export async function getUserData(code: string): Promise<any> { //burada ki değişkenler envden gelmeli
 	const response = await axios.post('https://api.intra.42.fr/oauth/token', {
 		grant_type: 'authorization_code',
 		client_id: 'u-s4t2ud-4df7e4ccc88a76163269bfb3503d28aeaa7df22d23bfe31334b908e0275ee337',

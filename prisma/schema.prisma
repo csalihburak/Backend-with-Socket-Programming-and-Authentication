@@ -80,7 +80,7 @@ model Validate {
   userId       Int
   validcode    Int
   email        String
-  expired_date DateTime @default(now())
+  expired_date DateTime @default(dbgenerated("(now() + interval '2 minutes')"))
 
   @@map("validations")
 }

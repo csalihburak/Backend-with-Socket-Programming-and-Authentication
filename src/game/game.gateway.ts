@@ -65,13 +65,13 @@ export class GameUtilsGateway
 						gameStatus: game.status,
 					};
 					const bekle = await this.test(data);
-					return JSON.stringify({ status: 200, gameHash: game.hash });
+					return ({ status: 200, gameHash: game.hash });
 				}
 			} catch (error) {
 				if (error instanceof Prisma.PrismaClientKnownRequestError) {
 					if (error.code === 'P2002') {
 						client.emit('alert', {code: 'danger', message: 'Room already exist'});
-						return JSON.stringify({ status: 403, message: 'Room already exist' });
+						return ({ status: 403, message: 'Room already exist' });
 					}
 				}
 				client.emit('alert', {code: 'danger', message: error});
@@ -92,13 +92,10 @@ export class GameUtilsGateway
 			if (game) {
 				const updatedGame = await this.gameService.updateGame(user, game);
 				if (updatedGame) {
-					return JSON.stringify({ status: 200, gameHash: game.hash });
+					return ({ status: 200, gameHash: game.hash });
 				}
 			} else {
-				return JSON.stringify({
-					statu: 203,
-					message: 'Game not found(Maybe is finished or never created)',
-				});
+				return ({ statu: 203, message: 'Game not found(Maybe is finished or never created)',});
 			}
 		} else {
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})

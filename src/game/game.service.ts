@@ -82,7 +82,7 @@ export class GameService {
 					userCount: 0,
 				},
 			}).catch((error) => {
-				throw error;
+				return error;
 			});
 		if (game) {
 			await this.prisma.user.update({

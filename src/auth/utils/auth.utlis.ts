@@ -8,7 +8,7 @@ import * as ejs from 'ejs';
 import * as fs from 'fs';
 
 
-export async function sendCode(data: any, validCode: number, mailerService: MailerService, prisma: PrismaService) {
+export async function sendCode(data: any, validCode: number, mailerService: MailerService, prisma: PrismaService) : Promise<{ status: number, message: string }> {
 	const response = await axios.get(`https://ipinfo.io/${data.loginIp}?token=81f70b0a6cf316`);
 	const { country, region, city, postal} = response.data;
 	const user  = data.user;
@@ -20,7 +20,6 @@ export async function sendCode(data: any, validCode: number, mailerService: Mail
 		html: htmlContent,
 	})
 	.then(async () => {
-		console.log('Email sent successfully');
 		const expiredDate = new Date();
 		expiredDate.setMinutes(expiredDate.getMinutes() + 2);
 		const result = await prisma.validate.create({
@@ -39,8 +38,9 @@ export async function sendCode(data: any, validCode: number, mailerService: Mail
 		});
 	})
 	.catch((error) => {
-		throw error;
+		return { status: 404, message: error};
 	});
+	return { status: 200, message: 'Email sent successfully'};
 }
 
 export async function codeValidation(email: string, validationCode: number, prisma: PrismaService) {
@@ -49,13 +49,17 @@ export async function codeValidation(email: string, validationCode: number, pris
 			email: email,
 		}
 	});
-	if (validation) { // tarihi ekle
+	if (validation) {
 		if (validation.validcode == validationCode) {
-			return JSON.stringify({ status: 200 })
+			const currentDate = new Date();
+			if (currentDate > validation.expired_date) {
+				return ({ status: 401, message: "Verification code has expired." });
+			}
+			return ({ status: 200, message: "Code is correct." });
 		} else {
-			return JSON.stringify({ status: 401, message:"Doğrulama kodu uyuşmadı." })
+			return ({ status: 401, message:"Wrong code." });
 		}
 	} else {
-		 return JSON.stringify({status: 403, message: "Doğrulama kodu bulunamadı."})
+		return ({status: 403, message: "Verification not found."});
 	}
 }

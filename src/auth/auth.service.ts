@@ -1,16 +1,27 @@
-import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation } from './utils/index'
+import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation, StartTransactionResponse } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Game, PrismaClient, stat} from '@prisma/client';
+import { Game, PrismaClient, User, stat} from '@prisma/client';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
+import * as crypto from 'crypto';
+
+
+interface GetUserResponse {
+	status: number;
+	user: User;
+	message: string;
+}
+
+
 
 @Injectable()
 export class AuthService {
+
 	prismaClient = new PrismaClient();
 	constructor(public prisma: PrismaService, private readonly mailerService: MailerService) {}
 
-	async intraGet(code: string, req: Request) {
+	async intraGet(code: string, req: Request) :  Promise<StartTransactionResponse>{
 		try {
 			const [data, callback] = await getUserData(code);
 			const info = await parseData(data.data, callback as string);
@@ -18,7 +29,7 @@ export class AuthService {
 			return res;
 		} catch (error) {
 			if (error.code == 'ERR_BAD_REQUEST')
-				return JSON.stringify({ status: 401, error: 'invalid_grant', message: process.env.ERROR_401 });
+				return ({ status: 401, message: `invalid_grant:\n${process.env.ERROR_401}`, sessionToken: null });
 			return error; 
 		}
 	}
@@ -34,46 +45,36 @@ export class AuthService {
 		}
 	}
 
-	async signIn(req: Request) {
+	async signIn(req: Request) :  Promise<{status: number, message: string, sessionToken: string, twoFacAuth: boolean}> {
 		try {
-			return userCheck(req, this.prisma);
+			return await userCheck(req, this.prisma);
 		} catch (error) {
 			return error;
 		}
 	}
 
-	async sendValidationCode(req) {
-		try {
-			const result = await getSession(req.body.sessionToken, this.prisma);
-			if (result.user.two_factor_auth) {
-				let validCode = Math.floor((Math.random() * 9999) + 1000);
-				await sendCode({
-					user: result.user,
-					loginIp: req.ip.split(':')[3],
-					url: req,
-					browser: req.useragent.browser,
-
-				}, validCode, this.mailerService, this.prisma);
-				return JSON.stringify({status: 403, message: "Email sent succesfully.", email: result.user.email});
+	async sendValidationCode(req) : Promise<{status: number, message: string, email?: string}> {
+		const result = await getSession(req.body.sessionToken, this.prisma);
+		if (result.user.two_factor_auth) {
+			let validCode = Math.floor((Math.random() * 9999) + 1000);
+			const response = await sendCode({ user: result.user, loginIp: req.ip.split(':')[3], url: req, browser: req.useragent.browser}, validCode, this.mailerService, this.prisma);
+			if (response.status == 200) {
+				return ({status: 200, message: "Email sent succesfully.", email: result.user.email});
 			} else {
-				return JSON.stringify({status: 403, message: "User not enabled 2-Factor Authantication."});
+				return { status: response.status, message: response.message, email: null }
 			}
-		} catch (error) {
-			return error;
-		}
+			} else {
+				return ({status: 403, message: "User not enabled 2-Factor Authantication."});
+			}
 	}
 
-	async validateCode(req) {
-		try {
-			if (!req.body.email) {
-				return JSON.stringify({status: 403, message: "Mail adresini kontrol ediniz."})
-			} else if (!req.body.code) {
-				return JSON.stringify({status: 403, message: "Doğrulama kodunu kontrol ediniz."})
-			} else {
-				return codeValidation(req.body.email, parseInt(req.body.code), this.prisma);
-			}
-		} catch (error) {
-			return error;
+	async validateCode(req: Request) {
+		if (!req.body.email) {
+			return ({status: 403, message: "Mail adresini kontrol ediniz."})
+		} else if (!req.body.code) {
+			return ({status: 403, message: "Doğrulama kodunu kontrol ediniz."})
+		} else {
+			return codeValidation(req.body.email, parseInt(req.body.code), this.prisma);
 		}
 	}
 
@@ -98,80 +99,82 @@ export class AuthService {
 				},
 			});
 			if (users) {
-				return JSON.stringify({status: 200, users: users});
+				return {status: 200, users: users};
 			} else {
-				console.log('hata: service 102');
-				return JSON.stringify({status: 501, message: "Something went wrong"});
+				return ({status: 501, message: "Something went wrong"});
 			}
 		} else {
-			return JSON.stringify({status: 404, message: "Session not found."});
+			return ({status: 404, message: "Session not found."});
 		}
 
 	}
 
-	async getUser(sessionToken: any) : Promise<any> {
+	async getUser(sessionToken: any): Promise<GetUserResponse> {
 		const session = await this.prisma.sessionToken.findFirst({
-			where: {
-				token: sessionToken,
-			},
+			where: { token: sessionToken, },
 		});
 		if (session) {
 			const user = await this.prisma.user.findUnique({
-				where : {
-					id: session.userId,
-				},
-				select: {
-					username: true,
-					pictureUrl: true,
-				}
+				where: { id: session.userId, },
 			});
 			if (user) {
-				const updateUser = await this.prisma.user.update({
-					where: {
-						username: user.username
-					},
-					data: {
-						status: stat.ONLINE,
-					}
+				const updateUser = await this.prisma.user.update({ 
+					where: { username: user.username, },
+					data: { status: stat.ONLINE, },
 				});
-				return JSON.stringify({status: 200, userName: user.username, pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`});
-			} else  {
-				return JSON.stringify({status: 404, message: "User not found"});
+				return { status: 200, user: user, message: ""};
+			} else {
+				return { status: 404, user: null, message: "User not found", };
 			}
 		} else {
-			return JSON.stringify({status: 404, message: "Session not found"});
+			return { status: 404, user: null, message: "Session not found", };
 		}
-	}
+	  }
+	  
 
 	async logOut(sessionToken: string) {
 		const result = await getSession(sessionToken, this.prisma);
-		if (result.data.status === 200) {
+		if (result.status === 200) {
 			let updateUser = await this.prisma.user.update({ where: {id: result.user.id}, data: {status: stat.OFFLINE }});
 			let deletedSession = await this.prisma.sessionToken.delete({
 				where: {
 					token: sessionToken,
 				}
 			});
-			return JSON.stringify({status: 200, message: `User ${result.user.username} has logged out successfully`});
+			return ({status: 200, message: `User ${result.user.username} has logged out successfully`});
 		} else {
-			return result.data.message;
+			return result.message;
 		}
 	}
 
-	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) {
-		const user = await this.getUser(sessionToken);
-		if (user) {
+	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) : Promise<{status: number, data: {userName: string, pictureUrl: string}, message: string}> {
+		const result = await this.getUser(sessionToken);
+		if (result.status == 200) {
+			const data = await check(body);
+			const user = result.user;
+			if (data) {
+				const password = crypto.createHash('sha256').update(data.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
+				const updatedUser = await this.prisma.user.update({
+					where: {
+						id: user.id,
+					},
+					data: {
+						pass: password,
+						username: data.username,
+						two_factor_auth: data.twoFacAuth,
+						pictureUrl: file ? file.path : user.pictureUrl,
+					}
+				}).catch(error => {
+					if (error.code === 'P2002') {
+						return ({ status: 203, message: `Username ${body.username} already exists.`, data: null});
+					}
+				});
+				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file.path}`}, message: null});
+			} else {
 
-			const updatedUser = await this.prisma.user.update({
-				where: {
-					username: user.username,
-				},
-				data: {
-					
-				}
-			})
+			}
 		} else {
-			return (JSON.stringify({status: 404, message: "User not found"}));
+			return ({status: 404, message: result.message, data: null});
 		}
 	}
 }

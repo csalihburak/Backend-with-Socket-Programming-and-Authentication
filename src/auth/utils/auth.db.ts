@@ -6,29 +6,51 @@ import { validate } from 'class-validator';
 import { Request } from 'express';
 import * as crypto from 'crypto';
 
+interface GetUserResponse {
+	status: number;
+	user: User;
+	message: string;
+}
 
-export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient) {
-    const sessionToken = crypto.randomBytes(32).toString('hex');
-    const loginIp = req.ip.split(':')[3];  
-    try {
-      const res = await Prisma.$transaction(async (tx) => {
-        	const user = await prisma.user.findUnique({
-				where: {
-					email: info.email,
-				},
+export interface StartTransactionResponse {
+	status: number;
+	message?: string;
+	sessionToken: string;
+	imageUrl?: string;
+	twoFacAuth?: boolean;
+}
+type ValidateUserResponse = { status: number; message?: string };
+
+
+export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient): Promise<StartTransactionResponse> {
+	const sessionToken = crypto.randomBytes(32).toString('hex');
+	const loginIp = req.ip.split(':')[3];
+	try {
+		const res = await Prisma.$transaction(async (tx) => {
+			const user = await prisma.user.findUnique({
+				where: { email: info.email, },
 			});
-        	if (!user) {
-				const user = await prisma.user.create({
+			if (!user) {
+				const newUser = await prisma.user.create({
 					data: {
-					username: info.username,
-					pass: info.password,
-					email: info.email,
-					fullName: info.fullName,
-					coalition: info.coalition,
-					two_factor_auth: false,
-					pictureUrl: info.pictureUrl,
+						username: info.username,
+						pass: info.password,
+						email: info.email,
+						fullName: info.fullName,
+						coalition: info.coalition,
+						two_factor_auth: false,
+						pictureUrl: info.pictureUrl,
 					},
 				});
+				const tokenCreated = await prisma.sessionToken.create({
+					data: {
+						userId: newUser.id,
+						loginIp,
+						token: sessionToken,
+					},
+				});
+				return { status: 203, message: 'User created without password', sessionToken: tokenCreated.token, imageUrl: info.pictureUrl };
+			} else {
 				const tokenCreated = await prisma.sessionToken.create({
 					data: {
 						userId: user.id,
@@ -36,33 +58,23 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
 						token: sessionToken,
 					},
 				});
-        	  	throw JSON.stringify({ status: 203, message: 'User created without password', token: tokenCreated.token, imageUrl: info.pictureUrl});
-        	} else {
-				const tokenCreated = await prisma.sessionToken.create({
-					data: { 
-						userId: user.id, 
-						loginIp, 
-						token: sessionToken,
-        	    	},
-				});
 				if (user.pass === '') {
-					throw JSON.stringify({ status: 401, message: 'user exist without password', token: tokenCreated.token, imageUrl: info.pictureUrl});
+					return { status: 401, message: 'User exists without password', token: tokenCreated.token, imageUrl: info.pictureUrl };
 				} else {
-					throw JSON.stringify({ status: 200, token: tokenCreated.token, twoFacAuth: user.two_factor_auth });
+					return { status: 200, sessionToken: tokenCreated.token, twoFacAuth: user.two_factor_auth };
 				}
 			}
 		});
 	} catch (error) {
-		throw error;
+		return error;
 	} finally {
 		await Prisma.$disconnect();
 	}
 }
   
-export async function check(body: any) {
+export async function check(body: any) : Promise<UserInputDto> {
 	const userInput = new UserInputDto();
 	userInput.password = body.password;
-	userInput.sessionToken = body.sessionToken;
 	if (body.twoFacAuth == "true")
 		userInput.twoFacAuth = true;
 	else 
@@ -70,100 +82,98 @@ export async function check(body: any) {
 	userInput.username = body.username;
 
 	const errors = await validate(userInput);
-/* 	if (errors.length > 0) {
-		throw new BadRequestException(errors);
-	} */
+	if (errors.length > 0) {
+		return null;
+	}
 	return userInput;
   }
 
-  export async function validateUser(body: any, file: Express.Multer.File, prisma: PrismaService, prismaClient: PrismaClient) {
+export async function validateUser( body: any, file: Express.Multer.File | undefined, prisma: PrismaService, prismaClient: PrismaClient): Promise<ValidateUserResponse> {
 	try {
 		const token = await prisma.sessionToken.findFirst({
-			where: { token: body.sessionToken, }, 
+			where: { token: body.sessionToken },
 		});
 		if (!token) {
-			return JSON.stringify({ status: 403, message: "Session not found." });
+			return { status: 403, message: "Session not found." };
 		}
-		const user = await prisma.user.findUnique({ 
-			where: { id: token.userId }, select: { pass: true },
+		const user = await prisma.user.findUnique({
+			where: { id: token.userId },
+			select: { pass: true },
 		});
 		if (user.pass) {
-			return JSON.stringify({ status: 200 });
+			return { status: 200 };
 		}
-  
-		const password = crypto.createHash('sha256').update(body.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
-
-		const data: any = { pass: password, two_factor_auth: body.info.twoFacAuth, username: body.info.username };
-		if (file)
+		const password = crypto.createHash("sha256").update(body.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+" ).digest("hex");
+		const data: any = {
+			pass: password,
+			two_factor_auth: body.info.twoFacAuth,
+			username: body.info.username,
+		};
+		if (file) {
 			data.pictureUrl = file.path;
+		}
 		try {
 			const updated = await prisma.user.update({
 				where: { id: token.userId },
 				data,
 			});
-			return JSON.stringify({ status: 200, message: `${body.username} saved successfully.` });
+			return { status: 200, message: `${body.username} saved successfully.`};
 		} catch (error) {
-			if (error.code === 'P2002') {
-				return JSON.stringify({ status: 403, message: `Username ${body.username} already exists.` });
+			if (error.code === "P2002") {
+				return { status: 203, message: `Username ${body.username} already exists.`};
 			}
-			throw error;
+			return {status: 501, message: error};
 		}
 	} catch (error) {
-		return error;
+		return { status: 500, message: error.message };
 	}
 }
 
-export async function userCheck(req: Request, prisma: PrismaService) {
-	try {
-		const user = new signIndto()
-		user.password = req.body.password;
-		user.username = req.body.username;
-		const errors = await validate(user);
+export async function userCheck(req: Request, prisma: PrismaService): Promise<{status: number, message: string, sessionToken: string, twoFacAuth: boolean}> {
+		const userData = new signIndto();
+		userData.password = req.body.password;
+		userData.username = req.body.username;
+		const errors = await validate(userData);
 		if (errors.length > 0) {
-			throw new BadRequestException(errors);
-		} else {
-			const resultInfo = await prisma.user.findUnique({
-				where: {
-					username: user.username,
-				},
-			})
-			if (resultInfo) {
-				if (resultInfo.pass === '') {
-					throw JSON.stringify({status: 401, message: "User profile is not fully set"});
-				} else {					
-					let password = crypto.createHash('sha256').update(user.password + process.env.SALT_KEY+ "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
-					let sessionToken = crypto.randomBytes(32).toString('hex');
-					if (resultInfo.pass === password) {
-						const tokenCreated = await prisma.sessionToken.create({
-							data: {
-								userId: resultInfo.id,
-								loginIp: req.ip.split(':')[3],
-								token: sessionToken,
-							},
-						});
-						const updateStat = await prisma.user.update({
-							where: {
-								username: user.username,
-							},
-							data: {
-								status: stat.ONLINE,
-							},
-						});
-						return JSON.stringify({status: 200, token: tokenCreated.token, twoFacAuth: resultInfo.two_factor_auth});
-					} else {
-						throw JSON.stringify({status: 203, message: "Passsword is wrong."});
-					}
-				}
-			} else {
-				throw JSON.stringify({status: 404, message: "User not found."});
-			}
-				}
-	} catch (error) {
-		return error;
-	}
+			return {status: 203, message: errors.toString(), sessionToken: null, twoFacAuth: null};
+		}
+
+		const user = await prisma.user.findUnique({
+			where: { username: userData.username },
+		});
+		if (!user) {
+			return ({ status: 404, message: 'User not found.', sessionToken: null, twoFacAuth: null });
+		}
+		if (user.pass === '') {
+			return ({ status: 404, message: 'Profile is not fully set.', sessionToken: null, twoFacAuth: null });
+		}
+
+		const password = crypto.createHash('sha256').update(userData.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
+		if (user.pass !== password) {
+			return ({ status: 203, message: 'Password is wrong.', sessionToken: null, twoFacAuth: null});
+		}
+
+		const sessionToken = crypto.randomBytes(32).toString('hex');
+		await prisma.sessionToken.create({
+			data: {
+				userId: user.id,
+				loginIp: req.ip.split(':')[3],
+				token: sessionToken,
+			},
+		});
+		await prisma.user.update({
+			where: {
+				username: user.username,
+			},
+			data: {
+				status: stat.ONLINE,
+			},
+		});
+
+		return ({ status: 200, sessionToken: sessionToken, twoFacAuth: user.two_factor_auth, message: "Welcome" });
 }
 
-export async function getSession(token: string, prisma: PrismaService): Promise<{data: any, user: User}>{
+export async function getSession(token: string, prisma: PrismaService): Promise<GetUserResponse>{
 	const session = await prisma.sessionToken.findFirst({
 		where: {
 			token: token,
@@ -174,16 +184,14 @@ export async function getSession(token: string, prisma: PrismaService): Promise<
 			where: {
 				id: session.userId,
 			},
-		}).catch(error => {
-			console.log(error);
 		});
 		if (user) {
 			delete user.pass;
-			return  {data: JSON.stringify({ status: 200, user: user}), user: user};
+			return  { status: 200, user: user, message: null };
 		} else {
-			return {data: JSON.stringify({ status: 501, message: "Something went wrong."}), user: null};
+			return { status: 501, message: "Something went wrong.", user: null };
 		}
 	} else {
-		return {data: JSON.stringify({ status: 404, message: "Session not found."}), user: null};
+		return { status: 404, message: "Session not found.", user: null }
 	}
 }

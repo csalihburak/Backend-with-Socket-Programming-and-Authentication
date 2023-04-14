@@ -44,7 +44,7 @@ export class GameGateaway {
 							server.to(gameHash).emit('startGame')
 							server.to(gameHash).emit('newUser', users);
 						}
-						return JSON.stringify({status: 200, gameHash: gameHash})
+						return ({status: 200, gameHash: gameHash})
 					} else if (user.id == game.rightPlayerId) {
 						let play = this.games[gameHash];
 						if (play) {
@@ -65,7 +65,7 @@ export class GameGateaway {
 						client.emit('initalize', play);
 						client.emit('join', play);
 						server.to(gameHash).emit('newUser', users);
-						return JSON.stringify({status: 200, gameHash: gameHash})
+						return ({status: 200, gameHash: gameHash})
 					}
 				} else {
 					client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
