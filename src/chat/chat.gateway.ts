@@ -85,11 +85,14 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const result = await this.chatService.addFriend(user, friendName);
+			console.log(result);
 			if (result.message) {
 				this.server.to(user.username).emit('alert', {code: 'success', message: result.message});
 				this.server.to(friendName).emit('alert', {code: 'info', message: `You have new friend request.`});
+				return result.message;
 			} else {
 				this.server.to(user.username).emit('alert', {code: 'danger', message: result.error});
+				return null;
 			}
 		} else {
 			this.server.to(client.id).emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'});
@@ -101,6 +104,7 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		const user = this.users[client.id];
 		if (user) {
 			const result = await this.webUtils.blockUser(user, friendName);
+			console.log(result);
 			if (result.message) {
 				this.server.to(user.username).emit('alert', {code: 'info', message: result.message});
 			} else {
@@ -241,7 +245,6 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 				client.join(data.channelName);
 				this.server.to(data.channelName).emit('userJoined', { message: `User: ${user.username} has joinned the channel`, time: date.toLocaleString()});
 			} else {
-				console.log(result);
 				this.server.to(user.username).emit('alert', { code:'warning', message: result.error });
 			}
 		} else {
@@ -338,10 +341,12 @@ export class chatGateAWay implements OnGatewayInit, OnGatewayDisconnect, OnGatew
 		if (user) {
 			const result = await this.webUtils.profile(user, username);
 			if (result.data) {
-				return result.data;
+				this.server.to(client.id).emit('profile', result.data);
 			} else if (!result.data && result.error) {
+				this.server.to(client.id).emit('profile', null);
 				return null;
 			}else {
+				this.server.to(client.id).emit('profile', result.error);
 				this.server.to(user.username).emit('alert', result.error);
 			}
 		} else {

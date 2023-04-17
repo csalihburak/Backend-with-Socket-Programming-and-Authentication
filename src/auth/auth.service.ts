@@ -90,13 +90,7 @@ export class AuthService {
 				orderBy: {
 					point: 'desc',
 				},
-				select: {
-					username: true,
-					won: true,
-					lost: true,
-					point: true,
-					status: true,
-				},
+				select: { username: true, won: true, lost: true, point: true, status: true, },
 			});
 			if (users) {
 				return {status: 200, users: users};
@@ -106,7 +100,32 @@ export class AuthService {
 		} else {
 			return ({status: 404, message: "Session not found."});
 		}
+	}
 
+	async liveScore(sessionToken: string) {
+		const session = await this.prisma.sessionToken.findFirst({
+			where: {
+				token: sessionToken,
+			},
+		});
+		if (session) {
+			const history = await this.prisma.gameHistory.findMany({
+				select: {
+					id: true,
+					leftPlayer: true,
+					rightPlayer: true,
+					leftPlayerScore: true,
+					rightPlayerScore: true,
+				}
+			});
+			if (history) {
+				return history;
+			} else {
+				return ({status: 501, message: "Something went wrong"});
+			}
+		} else {
+			return ({status: 404, message: "Session not found."});
+		}
 	}
 
 	async getUser(sessionToken: any): Promise<GetUserResponse> {
@@ -147,7 +166,7 @@ export class AuthService {
 		}
 	}
 
-	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) : Promise<{status: number, data: {userName: string, pictureUrl: string}, message: string}> {
+	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) : Promise<any> {
 		const result = await this.getUser(sessionToken);
 		if (result.status == 200) {
 			const data = await check(body);
@@ -168,10 +187,14 @@ export class AuthService {
 					if (error.code === 'P2002') {
 						return ({ status: 203, message: `Username ${body.username} already exists.`, data: null});
 					}
+					return error
 				});
-				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file.path}`}, message: null});
+				if (updatedUser.message)
+					return updatedUser;
+				console.log({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null})	
+				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null});
 			} else {
-
+				return result
 			}
 		} else {
 			return ({status: 404, message: result.message, data: null});

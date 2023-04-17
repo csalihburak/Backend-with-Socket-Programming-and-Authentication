@@ -32,7 +32,6 @@ export class GameUtilsGateway
 			client.emit('updateGames', this.games);
 			console.log(`client connected on gameGateway: ${user.username}`);
 		} else {
-			//client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 			console.log('Error! user not found on gameGateway connection');
 		}
 	}
@@ -171,10 +170,7 @@ export class GameUtilsGateway
 		const user = this.users[client.id];
 		if (user) {
 			if (this.queue.length === 0) {
-				console.log('first');
-				console.log(user.username);
 				this.queue.push(user);
-				
 				let gameName = this.randomWords({exactly: 9})[3];
 				let game = await this.gameService.createGame(user, [gameName, 5, Math.round(Math.random()) + 1, true, -1]);
 				if (game) {
@@ -187,7 +183,7 @@ export class GameUtilsGateway
 							pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`,
 							gameStatus: game.status,
 						};
-						const bekle = await this.test(data);
+						this.games.push(data);
 					}
 				}
 			} else {
@@ -197,11 +193,8 @@ export class GameUtilsGateway
 					}
 				});
 				if (game) {
-					console.log('second');
-					console.log(user.username);
 					const updatedGame = await this.gameService.updateGame(user, game);
 					if (updatedGame) {
-						//client.join(game.gameId);
 						client.emit('matchFound', game.hash);
 						this.utils.sleep(2000);
 						this.server.to(game.gameId).emit('matchFound', game.hash);
@@ -210,12 +203,31 @@ export class GameUtilsGateway
 					return;
 				}
 			}
-
 		} else {
 			console.log('user not found');
 			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
 		}
 	}
+
+	@SubscribeMessage('leaveQueue')
+	async leaveQue(client: Socket, data: any) {
+		const user = this.users[client.id];
+		if (user) {
+			const index = this.queue.indexOf(user);
+			if (index != -1) {
+				const game = await this.prisma.game.findFirst({where: {rightPlayerId: -1}});
+				if (game) {
+					const deletedGame = await this.prisma.game.delete({where: {id: game.id}});
+				}
+				this.queue.splice(0, 1);
+			} else {
+				client.emit('alert', {code: 'danger', message: 'user not in the que!'})
+			}
+		} else {
+			client.emit('alert', {code: 'danger', message: 'user not found please retry when the connection established!'})
+		}
+	}
+
 
 	@SubscribeMessage('start')
 	async firstStart(client: Socket, data: any) {

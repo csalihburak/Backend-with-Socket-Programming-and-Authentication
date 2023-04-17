@@ -184,7 +184,6 @@ export class chatUtils {
 				username: true,
 			}
 		}).catch(error => {
-			console.log(error);
 			console.log('Database error on getting friends');
 		});
 		const channels = await this.prisma.channels.findMany({

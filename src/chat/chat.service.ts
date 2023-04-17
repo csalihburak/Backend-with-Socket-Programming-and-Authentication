@@ -182,7 +182,7 @@ export class chatService {
 		});
 		if (friend) {
 			if (!user.blockedUsers.includes(friend.id)) {
-				if (!friend.friends.includes(user.id)) {
+				if (!user.friends.includes(friend.id)) {
 					if (!friend.blockedUsers.includes(user.id)) {
 						const request = await this.prisma.friendRequest.findFirst({
 							where: {
@@ -197,6 +197,7 @@ export class chatService {
 									receiverId: friend.id,
 								},
 							});
+							console.log(friendRequest);
 							return {message: `Friend request has been sent to ${friend.username}`, error : null};
 						} else {
 							return {message: null, error : `Friend request already been sent!`};
@@ -205,7 +206,18 @@ export class chatService {
 						return {message: null, error : `${friend.fullName} has blocked you.`};
 					}
 				} else {
-					return {message: null, error : `${friend.fullName} already your friend.`};
+					let index = user.friends.indexOf(friend.id);
+					if (index != -1)
+						user.friends.splice(index, 1);
+					const updatedUser = await this.prisma.user.update({
+						where: {
+							id: user.id,
+						},
+						data: {
+							friends: { set: user.friends },
+						}
+					});
+					return {message: `${friend.fullName} removed from your friend list!`, error : null};
 				}
 			} else {
 				return {message: null, error : `You blocked this user '${friend.username}'`};
@@ -229,7 +241,6 @@ export class chatService {
 				}
 			});
 			if (request) {
-				console.log(`I am printing this because I am testin this function only works for one time.`)
 				if (accept === true) {
 					const userUpdated = await this.prisma.user.update({
 						where: {

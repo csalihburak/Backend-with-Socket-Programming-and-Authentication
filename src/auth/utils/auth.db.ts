@@ -22,7 +22,7 @@ export interface StartTransactionResponse {
 type ValidateUserResponse = { status: number; message?: string };
 
 
-export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient): Promise<StartTransactionResponse> {
+export async function startTransaction(prisma: PrismaService, info: any, req: Request, Prisma: PrismaClient): Promise<any> {
 	const sessionToken = crypto.randomBytes(32).toString('hex');
 	const loginIp = req.ip.split(':')[3];
 	try {
@@ -31,6 +31,7 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
 				where: { email: info.email, },
 			});
 			if (!user) {
+
 				const newUser = await prisma.user.create({
 					data: {
 						username: info.username,
@@ -49,6 +50,7 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
 						token: sessionToken,
 					},
 				});
+
 				return { status: 203, message: 'User created without password', sessionToken: tokenCreated.token, imageUrl: info.pictureUrl };
 			} else {
 				const tokenCreated = await prisma.sessionToken.create({
@@ -59,13 +61,16 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
 					},
 				});
 				if (user.pass === '') {
-					return { status: 401, message: 'User exists without password', token: tokenCreated.token, imageUrl: info.pictureUrl };
+					return { status: 401, message: 'User exists without password', sessionToken: tokenCreated.token, imageUrl: info.pictureUrl };
 				} else {
 					return { status: 200, sessionToken: tokenCreated.token, twoFacAuth: user.two_factor_auth };
+
 				}
 			}
 		});
+		return res;
 	} catch (error) {
+
 		return error;
 	} finally {
 		await Prisma.$disconnect();
@@ -81,10 +86,10 @@ export async function check(body: any) : Promise<UserInputDto> {
 		userInput.twoFacAuth = false;
 	userInput.username = body.username;
 
-	const errors = await validate(userInput);
+/* 	const errors = await validate(userInput);
 	if (errors.length > 0) {
 		return null;
-	}
+	} */
 	return userInput;
   }
 
@@ -179,7 +184,7 @@ export async function getSession(token: string, prisma: PrismaService): Promise<
 			token: token,
 		},
 	});
-	if (token) {
+	if (session) {
 		const user = await prisma.user.findUnique({
 			where: {
 				id: session.userId,

@@ -60,7 +60,7 @@ export class webUtils{
 		}
 	}
 
-	async profile(user: User, username: string) : Promise<{data: { img: string, friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any }, error: any}>{
+	async profile(user: User, username: string) : Promise<{data: { img: string, friends: any[], matchHistory: any[], achievements: any[], posts: any[], stats: any, blocked: boolean, addFriend }, error: any}>{
 		const friend = await this.prisma.user.findUnique({
 			where: {
 				username,
@@ -76,6 +76,8 @@ export class webUtils{
 					status: true,
 					pictureUrl: true,
 					username: true,
+					friends: true,
+					blockedUsers: true
 				}
 				});
 				const matchHistory = await this.prisma.gameHistory.findMany({
@@ -100,7 +102,10 @@ export class webUtils{
 						},
 					},
 				});
-				return {data: {img: friend.pictureUrl, friends: friends, matchHistory: matchHistory, achievements: friend.achievements, posts: posts, stats: {win: friend.won, lost: friend.lost, point: friend.point} }, error: null}
+				let blocked, addFriend;
+				blocked = user.blockedUsers.includes(friend.id) ? true : false;
+				addFriend = user.friends.includes(friend.id) ? true : false;
+				return {data: {img: friend.pictureUrl, friends: friends, matchHistory: matchHistory, achievements: friend.achievements, posts: posts, stats: {win: friend.won, lost: friend.lost, point: friend.point}, blocked, addFriend }, error: null}
 			} {
 				return {data: null, error: null}
 
@@ -193,9 +198,28 @@ export class webUtils{
 					where: { id: user.id},
 					data: { blockedUsers: { push: friend.id }, friends: user.friends}
 				});
+				id = friend.friends.indexOf(user.id);
+				if (id != -1)
+					friend.friends.splice(id, 1);
+				const updateFriend = await this.prisma.user.update({
+					where: {
+						id: friend.id,
+					},
+					data: {
+						friends: { set: friend.friends },
+					}
+				});
+
 				return {message: `'${friend.username}' has been blocked`, error: null};
 			} else {
-				return {message: null, error: `'${friendName}' already blocked`};
+				let index = user.blockedUsers.indexOf(friend.id);
+				if (index != -1)
+					user.blockedUsers.splice(index, 1);
+				const updatedUser = await this.prisma.user.update({
+					where: { id: user.id},
+					data: { blockedUsers: { set: user.blockedUsers }, friends: user.friends}
+				});
+				return {message: `'${friendName}' unblocked`, error: null};
 			}
 		} else {
 			return {message: null, error: `No such a user: ${friendName}`}

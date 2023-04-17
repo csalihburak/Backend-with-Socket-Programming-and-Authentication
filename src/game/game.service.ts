@@ -138,7 +138,6 @@ export class GameService {
 		if (game) {
 			return game;
 		} else {
-			console.log('error');
 			console.log('Error while getting game');
 			return null;
 		}
