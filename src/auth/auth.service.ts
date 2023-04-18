@@ -1,10 +1,13 @@
-import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation, StartTransactionResponse } from './utils/index'
+import { startTransaction, validateUser, check, userCheck, getSession, sendCode, getUserData, parseData, codeValidation, StartTransactionResponse, regex } from './utils/index'
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Game, PrismaClient, User, stat} from '@prisma/client';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import * as crypto from 'crypto';
+import * as ejs from 'ejs';
+import * as fs from 'fs';
+import { error } from 'console';
 
 
 interface GetUserResponse {
@@ -198,6 +201,75 @@ export class AuthService {
 			}
 		} else {
 			return ({status: 404, message: result.message, data: null});
+		}
+	}
+
+	async forgetPassword(req: any) {
+		const email = req.body.email;
+		console.log(email);
+		const user = await this.prisma.user.findUnique({
+			where: {
+				email: email,
+			},
+			select: {
+				id: true,
+				username: true,
+				email: true,
+			}
+		});
+		if (user) {
+			const sessionToken = crypto.randomBytes(32).toString('hex');
+			const session = await this.prisma.sessionToken.create({
+				data: {
+					token: sessionToken,
+					userId: user.id,
+					loginIp: req.ip.split(':')[3],
+				}
+			});
+			const htmlTemplate = fs.readFileSync('src/auth/templates/resetPassword.html', 'utf8');
+			const htmlContent = ejs.render(htmlTemplate, { user: user,  resetLink: `http://64.226.65.83:3001/resetPassword?sessionToken=${sessionToken}`});
+			const mail = await this.mailerService.sendMail({
+				to: user.email,
+				subject: 'Password Reset Request',
+				html: htmlContent,
+			});
+			console.log(email);
+			if (mail) {
+				return { status: 200, messamge: "Password reset link has been sent to user."};
+			} else {
+				return { status: 501, messamge: "Something went wrong."};
+			}
+
+		} else {
+			return {stat: 404, message: "No account found with that email address. Please try again or sign up if you're new."};
+		}
+	}
+
+	async resetPassword(req: any, sessionToken: any) {
+		const postData = req.body;
+		if (postData.password) {
+			const session = await this.prisma.sessionToken.findFirst({
+				where: { token: sessionToken },
+			});
+			if (session) {
+				const password = regex.password.test(postData.password) ? postData.password : null;
+				if (password) {
+					const cryptoPass = crypto.createHash('sha256').update(password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
+					const updatedUser = await this.prisma.user.update({
+						where: { id: session.userId, },
+						data: { pass: cryptoPass, }
+					}).catch((error) => {
+						return { status: 501, message: "Something went wrong" };
+					});
+					return { status: 200, message: "Password succesfully updated." };
+				} else {
+					return { status: 404, message: "Password is not strong eneough" };
+				}
+			} else {
+				return { status: 404, message: "Session not found" };
+			}
+		} else {
+			return {status: 203, message: "Please check the password"};
 		}
 	}
 }

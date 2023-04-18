@@ -138,10 +138,10 @@ export async function userCheck(req: Request, prisma: PrismaService): Promise<{s
 		const userData = new signIndto();
 		userData.password = req.body.password;
 		userData.username = req.body.username;
-		const errors = await validate(userData);
+/* 		const errors = await validate(userData);
 		if (errors.length > 0) {
 			return {status: 203, message: errors.toString(), sessionToken: null, twoFacAuth: null};
-		}
+		} */
 
 		const user = await prisma.user.findUnique({
 			where: { username: userData.username },

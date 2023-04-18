@@ -88,13 +88,31 @@ export class AuthController {
 	}
 
 	@Post('sendValidationCode')
-	async sendValidCode (@Req() req) {
+	async sendValidCode (@Req() req: Request) {
 		return this.authService.sendValidationCode(req);
 	}
 
 	@Post('loginValidate')
-	async validate(@Req() req) {
+	async validate(@Req() req: Request) {
 		return this.authService.validateCode(req);
+	}
+
+	@Post('forgetPassword')
+	async forgetPassword(@Req() req: Request) {
+		this.authService.forgetPassword(req);
+	}
+
+	@Post('resetPassword')
+	async resetPassword(@Req() req: Request) {
+		const sessionToken : any = req.query.sessionToken;
+		console.log(sessionToken);
+		if (sessionToken) {
+			const result = await this.authService.resetPassword(req, sessionToken);
+			console.log(result);
+			return result;
+		} else {
+			return { status: 404, message: "Sessiontoken is not given." }
+		}
 	}
 
 
