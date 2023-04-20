@@ -217,6 +217,12 @@ export class GameUtilsGateway
 			if (index != -1) {
 				const game = await this.prisma.game.findFirst({where: {rightPlayerId: -1}});
 				if (game) {
+					for (var i = 0; i < this.games.length; i++) {
+						if (this.games[i].hash === game.hash) {
+							this.games.splice(i, 1);
+							break;
+						}
+					}
 					const deletedGame = await this.prisma.game.delete({where: {id: game.id}});
 				}
 				this.queue.splice(0, 1);

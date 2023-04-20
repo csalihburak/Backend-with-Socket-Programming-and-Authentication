@@ -41,7 +41,7 @@ export class GameGateaway {
 							newGame.leftPlayerId = user.id;
 							this.games[gameHash] = newGame;
 							client.emit('initalize', newGame);
-							//server.to(gameHash).emit('startGame')
+							server.to(gameHash).emit('startGame')
 							server.to(gameHash).emit('newUser', users);
 						}
 						return ({status: 200, gameHash: gameHash})

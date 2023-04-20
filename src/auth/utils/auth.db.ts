@@ -76,8 +76,8 @@ export async function startTransaction(prisma: PrismaService, info: any, req: Re
 		await Prisma.$disconnect();
 	}
 }
-  
-export async function check(body: any) : Promise<UserInputDto> {
+
+export async function check(body: any) : Promise<{ data: UserInputDto, errors: string[] }> {
 	const userInput = new UserInputDto();
 	userInput.password = body.password;
 	if (body.twoFacAuth == "true")
@@ -86,12 +86,13 @@ export async function check(body: any) : Promise<UserInputDto> {
 		userInput.twoFacAuth = false;
 	userInput.username = body.username;
 
-/* 	const errors = await validate(userInput);
+ 	const errors = await validate(userInput);
 	if (errors.length > 0) {
-		return null;
-	} */
-	return userInput;
-  }
+		const errorMessages = errors.map(error => Object.values(error.constraints)).flat();
+		return { data: null, errors: errorMessages };
+	} 
+	return { data: userInput, errors: [] };
+}
 
 export async function validateUser( body: any, file: Express.Multer.File | undefined, prisma: PrismaService, prismaClient: PrismaClient): Promise<ValidateUserResponse> {
 	try {
@@ -178,7 +179,7 @@ export async function userCheck(req: Request, prisma: PrismaService): Promise<{s
 		return ({ status: 200, sessionToken: sessionToken, twoFacAuth: user.two_factor_auth, message: "Welcome" });
 }
 
-export async function getSession(token: string, prisma: PrismaService): Promise<GetUserResponse>{
+export async function getSession(token: any, prisma: PrismaService): Promise<GetUserResponse>{
 	const session = await prisma.sessionToken.findFirst({
 		where: {
 			token: token,

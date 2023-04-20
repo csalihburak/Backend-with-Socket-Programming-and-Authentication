@@ -39,10 +39,14 @@ export class AuthService {
 
 	async singup(body: any, file: Express.Multer.File) {
 		try {
-			const info = await check(body);
-			body.info = info;
-			const user = await validateUser(body, file, this.prisma, this.prismaClient);
-			return user;
+			const {data, errors} = await check(body);
+			if (data) {	
+				body.info = data;
+				const user = await validateUser(body, file, this.prisma, this.prismaClient);
+				return user;
+			} else {
+				return errors;
+			}
 		} catch (error) {
 			return error;
 		}
@@ -56,8 +60,8 @@ export class AuthService {
 		}
 	}
 
-	async sendValidationCode(req) : Promise<{status: number, message: string, email?: string}> {
-		const result = await getSession(req.body.sessionToken, this.prisma);
+	async sendValidationCode(req: any) : Promise<{status: number, message: string, email?: string}> {
+		const result = await getSession(req.query.sessionToken ? req.query.sessionToken : "", this.prisma);
 		if (result.user.two_factor_auth) {
 			let validCode = Math.floor((Math.random() * 9999) + 1000);
 			const response = await sendCode({ user: result.user, loginIp: req.ip.split(':')[3], url: req, browser: req.useragent.browser}, validCode, this.mailerService, this.prisma);
@@ -172,7 +176,7 @@ export class AuthService {
 	async updateUser(file: Express.Multer.File, sessionToken: string, body: any) : Promise<any> {
 		const result = await this.getUser(sessionToken);
 		if (result.status == 200) {
-			const data = await check(body);
+			const {data, errors} = await check(body);
 			const user = result.user;
 			if (data) {
 				const password = crypto.createHash('sha256').update(data.password + process.env.SALT_KEY + "42&bG432//t())$$$#*#z#x£SD££>c&>>+").digest('hex');
@@ -197,7 +201,7 @@ export class AuthService {
 				console.log({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null})	
 				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null});
 			} else {
-				return result
+				return errors
 			}
 		} else {
 			return ({status: 404, message: result.message, data: null});
@@ -206,42 +210,45 @@ export class AuthService {
 
 	async forgetPassword(req: any) {
 		const email = req.body.email;
-		console.log(email);
-		const user = await this.prisma.user.findUnique({
-			where: {
-				email: email,
-			},
-			select: {
-				id: true,
-				username: true,
-				email: true,
-			}
-		});
-		if (user) {
-			const sessionToken = crypto.randomBytes(32).toString('hex');
-			const session = await this.prisma.sessionToken.create({
-				data: {
-					token: sessionToken,
-					userId: user.id,
-					loginIp: req.ip.split(':')[3],
+		if (email != null) {
+			const user = await this.prisma.user.findUnique({
+				where: {
+					email: email,
+				},
+				select: {
+					id: true,
+					username: true,
+					email: true,
 				}
 			});
-			const htmlTemplate = fs.readFileSync('src/auth/templates/resetPassword.html', 'utf8');
-			const htmlContent = ejs.render(htmlTemplate, { user: user,  resetLink: `http://64.226.65.83:3001/resetPassword?sessionToken=${sessionToken}`});
-			const mail = await this.mailerService.sendMail({
-				to: user.email,
-				subject: 'Password Reset Request',
-				html: htmlContent,
-			});
-			console.log(email);
-			if (mail) {
-				return { status: 200, messamge: "Password reset link has been sent to user."};
-			} else {
-				return { status: 501, messamge: "Something went wrong."};
-			}
+			if (user) {
+				const sessionToken = crypto.randomBytes(32).toString('hex');
+				const session = await this.prisma.sessionToken.create({
+					data: {
+						token: sessionToken,
+						userId: user.id,
+						loginIp: req.ip.split(':')[3],
+					}
+				});
+				const htmlTemplate = fs.readFileSync('src/auth/templates/resetPassword.html', 'utf8');
+				const htmlContent = ejs.render(htmlTemplate, { user: user,  resetLink: `http://64.226.65.83/resetPassword?sessionToken=${sessionToken}`});
+				const mail = await this.mailerService.sendMail({
+					to: user.email,
+					subject: 'Password Reset Request',
+					html: htmlContent,
+				});
+				console.log(email);
+				if (mail) {
+					return { status: 200, message: "Password reset link has been sent to user."};
+				} else {
+					return { status: 501, message: "Something went wrong."};
+				}
 
+			} else {
+				return {status: 404, message: "No account found with that email address. Please try again or sign up if you're new."};
+			}
 		} else {
-			return {stat: 404, message: "No account found with that email address. Please try again or sign up if you're new."};
+			return {status: 203, message: "No email is given!"};
 		}
 	}
 

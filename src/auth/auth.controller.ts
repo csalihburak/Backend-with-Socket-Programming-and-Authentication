@@ -5,7 +5,6 @@ import { Request, Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as Jimp from 'jimp';
-import { FlagFilled } from '@ant-design/icons';
 
 @Controller('auth')
 export class AuthController {
@@ -14,13 +13,15 @@ export class AuthController {
 	@Get('intra42')
 	async firstInsert(@Query() query, @Req() req: Request, @Res() res: Response) {
 		if (!query.code) {
-			return { status: 404, message: 'Auth token is not given' };
+			res.send({ status: 404, message: 'Auth token is not given' })
+			return;
 		}
 		const response = await this.authService.intraGet(query.code, req);
+		console.log(response);
 		if (response.status == 200) {
-			res.redirect(`http://64.226.65.83:3001/welcome?sessionToken=${response.sessionToken}&twoFacAuth=${response.twoFacAuth}`);
+			res.redirect(`http://64.226.65.83/welcome?sessionToken=${response.sessionToken}&twoFacAuth=${response.twoFacAuth}`);
 		} else{
-			res.redirect(`http://64.226.65.83:3001/setProfile?sessionToken=${response.sessionToken}`); //hata
+			res.redirect(`http://64.226.65.83/setProfile?sessionToken=${response.sessionToken}`); //hata
 		}
 		res.end();
 	}
@@ -40,7 +41,7 @@ export class AuthController {
 		}),
 	)
 	async signup(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
-		try {
+/* 		try {
 			Jimp.read(file.path, (err, lenna) => {
 				if (err) throw err;
 				lenna
@@ -48,11 +49,14 @@ export class AuthController {
 				.quality(100)
 				.write(file.path);
 			});
-			const sessionToken = req.body;
-			const result =  await this.authService.singup(req.body, file);
-			return result;
 		} catch (error) {
 			return {status: 403, message: "Please use small size images"};
+		} */
+		if (req.body.sessionToken != null) {
+			const result =  await this.authService.singup(req.body, file);
+			return result;
+		} else {
+			return { status: 203, message: "Session Token is not given" }		
 		}
 	}
 
@@ -69,27 +73,43 @@ export class AuthController {
 	@Get('user')
 	async user(@Req() req: Request) {
 		const sessionToken = req.query.sessionToken;
-		const result = await this.authService.getUser(sessionToken);
-		if(result.status == 200) {
-			return {status: 200, userName: result.user.username, pictureUrl: `http://64.226.65.83:3000/${result.user.pictureUrl}`};
+		if (sessionToken != null) {
+			const result = await this.authService.getUser(sessionToken);
+			if (result.status == 200) {
+				return {status: 200, userName: result.user.username, pictureUrl: `http://64.226.65.83:3000/${result.user.pictureUrl}`};
+			}
+		} else {
+			return { status: 203, message: "Session Token is not given" }		
 		}
 	}
 
 	@Get('leaderBoard')
 	async leaderBord(@Req() req: Request) {
 		const sessionToken = req.query.sessionToken;
-		return this.authService.leaderBord(sessionToken);
+		if (sessionToken != null) {
+			return this.authService.leaderBord(sessionToken);
+		} else {
+			return { status: 203, message: "Session Token is not given" }		
+		}
 	}
 
 	@Get('liveScore')
 	async liveScor(@Req() req: Request) {
 		const sessionToken : any = req.query.sessionToken;
-		return await this.authService.liveScore(sessionToken);
+		if (sessionToken != null) {
+			return await this.authService.liveScore(sessionToken);
+		} else {
+			return { status: 203, message: "Session Token is not given" }		
+		}
 	}
 
 	@Post('sendValidationCode')
 	async sendValidCode (@Req() req: Request) {
-		return this.authService.sendValidationCode(req);
+		if (req.query.sessionToken != null) {
+			return this.authService.sendValidationCode(req);
+		} else {
+			return { status: 203, message: "Session Token is not given" };
+		}
 	}
 
 	@Post('loginValidate')
@@ -98,20 +118,22 @@ export class AuthController {
 	}
 
 	@Post('forgetPassword')
-	async forgetPassword(@Req() req: Request) {
-		this.authService.forgetPassword(req);
+	async forgetPassword(@Req() req: Request, @Res() res: Response) {
+		const result = await this.authService.forgetPassword(req);
+		res.status(result.status);
+		res.setHeader('status', result.status)
+		res.send(result);
+		res.end();
 	}
 
 	@Post('resetPassword')
 	async resetPassword(@Req() req: Request) {
 		const sessionToken : any = req.query.sessionToken;
-		console.log(sessionToken);
 		if (sessionToken) {
 			const result = await this.authService.resetPassword(req, sessionToken);
-			console.log(result);
 			return result;
 		} else {
-			return { status: 404, message: "Sessiontoken is not given." }
+			return { status: 203, message: "Sessiontoken is not given." }
 		}
 	}
 
@@ -137,16 +159,20 @@ export class AuthController {
 				lenna.resize(256, 256) .quality(100).write(file.path);
 			});
 			const url = file.path;
-			return ({ body: { url: url }});
+			res.send({ body: { url: url }});
 		} catch(error) {
-			return error;
+			res.send(error);
 		}
 	}
 
 	@Post('logout')
 	async logout(@Req() req: Request) {
 		const sessionToken : any = req.query.sessionToken;
-		return await this.authService.logOut(sessionToken);
+		if (sessionToken) {
+			return await this.authService.logOut(sessionToken);
+		} else {
+			return { status: 203, message: "Sessiontoken is not given." }
+		}
 	}
 
 	@Post('updateUser')
@@ -169,7 +195,7 @@ export class AuthController {
 			const result = await this.authService.updateUser(file, sessionToken, req.body);
 			return result;
 		} else {
-			return ({status: 203, message: "Sessiontoken not found"});
+			return { status: 203, message: "Sessiontoken is not given." }
 		}
 	}
 

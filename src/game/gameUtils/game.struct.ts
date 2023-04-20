@@ -55,6 +55,10 @@ export class gameStruct {
 	downPressed2 = false;
 }
 
+function createRandom(min: number, max: number) {
+	return Math.random() * (max - min) + min;
+}
+
 function resetGame(game: gameStruct) {
 	game.ball.x = game.canvas.width / 2;
 	game.ball.y =  game.canvas.height / 2;
@@ -62,12 +66,9 @@ function resetGame(game: gameStruct) {
 	game.rightPlayer.paddle.y =  game.canvas.height / 2 - 50;
 	game.leftPlayer.paddle.x = 0;
 	game.leftPlayer.paddle.y = game.canvas.height / 2 - 50;
-  
-	game.ball.velocityX = Math.random() * 0.75 - 1.20;
+
+	game.ball.velocityX = Math.random() < 0.5 ? createRandom(-1.20, -0.45) : createRandom(0.45, 1.20);
 	game.ball.velocityY = Math.random() * 0.75 - 1.20;
-}
-function createRandom(min: number, max: number) {
-	return Math.random() * (max - min) + min;
 }
 
 export function update(game: gameStruct) {
