@@ -10,8 +10,10 @@ $ npm install
 ## Running the app
 
 ```bash
+
 # for the database
 $ docker compose up 
+
 # development
 $ npm run start
 
