@@ -19,9 +19,9 @@ export class AuthController {
 		const response = await this.authService.intraGet(query.code, req);
 		console.log(response);
 		if (response.status == 200) {
-			res.redirect(`http://64.226.65.83/welcome?sessionToken=${response.sessionToken}&twoFacAuth=${response.twoFacAuth}`);
+			res.redirect(`http://localhost/welcome?sessionToken=${response.sessionToken}&twoFacAuth=${response.twoFacAuth}`);
 		} else{
-			res.redirect(`http://64.226.65.83/setProfile?sessionToken=${response.sessionToken}`); //hata
+			res.redirect(`http://localhost/setProfile?sessionToken=${response.sessionToken}`); //hata
 		}
 		res.end();
 	}
@@ -76,7 +76,7 @@ export class AuthController {
 		if (sessionToken != null) {
 			const result = await this.authService.getUser(sessionToken);
 			if (result.status == 200) {
-				return {status: 200, userName: result.user.username, pictureUrl: `http://64.226.65.83:3000/${result.user.pictureUrl}`};
+				return {status: 200, userName: result.user.username, pictureUrl: `http://localhost:3000/${result.user.pictureUrl}`};
 			}
 		} else {
 			return { status: 203, message: "Session Token is not given" }		

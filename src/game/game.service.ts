@@ -49,7 +49,7 @@ export class GameService {
 			},
 		});
 		users.forEach((user) => {
-			pictures.push(`http://64.226.65.83:3000/${user.pictureUrl}`);
+			pictures.push(`http://localhost:3000/${user.pictureUrl}`);
 		});
 		return pictures;
 	}

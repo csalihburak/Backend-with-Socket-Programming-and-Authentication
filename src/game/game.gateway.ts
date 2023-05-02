@@ -60,7 +60,7 @@ export class GameUtilsGateway
 						name: game.gameId,
 						hash: game.hash,
 						userName: user.username,
-						pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`,
+						pictureUrl: `http://localhost:3000/${user.pictureUrl}`,
 						gameStatus: game.status,
 					};
 					const bekle = await this.test(data);
@@ -180,7 +180,7 @@ export class GameUtilsGateway
 							name: game.gameId,
 							hash: game.hash,
 							userName: user.username,
-							pictureUrl: `http://64.226.65.83:3000/${user.pictureUrl}`,
+							pictureUrl: `http://localhost:3000/${user.pictureUrl}`,
 							gameStatus: game.status,
 						};
 						this.games.push(data);

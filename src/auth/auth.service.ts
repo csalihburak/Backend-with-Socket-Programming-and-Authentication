@@ -198,8 +198,8 @@ export class AuthService {
 				});
 				if (updatedUser.message)
 					return updatedUser;
-				console.log({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null})	
-				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://64.226.65.83:3000/${file ? file.path : user.pictureUrl}`}, message: null});
+				console.log({ status: 200, data: { userName: data.username, pictureUrl: `http://localhost:3000/${file ? file.path : user.pictureUrl}`}, message: null})	
+				return ({ status: 200, data: { userName: data.username, pictureUrl: `http://localhost:3000/${file ? file.path : user.pictureUrl}`}, message: null});
 			} else {
 				return errors
 			}
@@ -231,7 +231,7 @@ export class AuthService {
 					}
 				});
 				const htmlTemplate = fs.readFileSync('src/auth/templates/resetPassword.html', 'utf8');
-				const htmlContent = ejs.render(htmlTemplate, { user: user,  resetLink: `http://64.226.65.83/resetPassword?sessionToken=${sessionToken}`});
+				const htmlContent = ejs.render(htmlTemplate, { user: user,  resetLink: `http://localhost/resetPassword?sessionToken=${sessionToken}`});
 				const mail = await this.mailerService.sendMail({
 					to: user.email,
 					subject: 'Password Reset Request',

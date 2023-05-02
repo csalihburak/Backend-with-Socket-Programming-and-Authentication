@@ -27,10 +27,10 @@ export async function parseData(data: object, coalition: string) {
 export async function getUserData(code: string): Promise<any> { //burada ki değişkenler envden gelmeli
 	const response = await axios.post('https://api.intra.42.fr/oauth/token', {
 		grant_type: 'authorization_code',
-		client_id: 'u-s4t2ud-4df7e4ccc88a76163269bfb3503d28aeaa7df22d23bfe31334b908e0275ee337',
-		client_secret:'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',
+		client_id: process.env.CLIENT_ID,
+		client_secret: process.nev.CLIENT_SECRET,
 		code: code,
-		redirect_uri: 'http://64.226.65.83:3000/auth/intra42',
+		redirect_uri: `http://${process.env.IP_ADDRESS}:3000/auth/intra42`,
 	});
 	const data = await axios.get('https://api.intra.42.fr/v2/me', {
 		headers: { Authorization: `Bearer ${response.data.access_token}` },
